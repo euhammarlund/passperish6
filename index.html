@@ -1,0 +1,1662 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Pass or perish: the rate-gate model</title>
+<meta name="description" content="An interactive audit of the Hadean time budget, from chemistry to probability to duration, for the manuscript Pass or perish.">
+<link rel="icon" href="favicon.svg" type="image/svg+xml">
+<link rel="stylesheet" href="css/app.css">
+</head>
+<body>
+
+<header class="masthead">
+  <div class="masthead-inner">
+    <div class="brand">
+      <svg width="34" height="34" viewBox="0 0 34 34" fill="none" aria-label="Pass or perish rate-gate model logo">
+        <rect x="1" y="1" width="32" height="32" rx="3" stroke="currentColor" stroke-width="1.6"/>
+        <path d="M5 29 L29 5" stroke="currentColor" stroke-width="1.6" stroke-dasharray="4 3"/>
+        <circle cx="11.5" cy="11.5" r="3.4" fill="currentColor"/>
+        <circle cx="22.5" cy="22.5" r="3.4" stroke="currentColor" stroke-width="1.6"/>
+      </svg>
+      <div class="brand-text">
+        <h1>Pass or perish</h1>
+        <p>The rate-gate model: chemistry to probability to duration</p>
+      </div>
+    </div>
+    <div class="seg mode-seg" id="modeSeg" role="group" aria-label="How much to show">
+      <button data-v="guided" aria-pressed="true">Guided</button>
+      <button data-v="workbench" aria-pressed="false">Full workbench</button>
+    </div>
+    <div class="budget-chip">
+      <span class="lbl">Budget</span>
+      <span class="val" id="chipBudget">200</span><span class="unit">Myr</span>
+      <span class="lbl" style="margin-left:6px">Chemistry at</span>
+      <span class="val" id="chipTemp">70</span><span class="unit">C</span>
+    </div>
+  </div>
+  <nav class="tabs" role="tablist" id="tabsGuided">
+    <button role="tab" data-view="start" aria-selected="true">1. Start here</button>
+    <button role="tab" data-view="story" aria-selected="false">2. Follow one setting</button>
+    <button role="tab" data-view="cycles" aria-selected="false">3. Hard steps and cycles</button>
+    <button role="tab" data-view="eco" aria-selected="false">4. LUCA's ecosystem and time left</button>
+    <button role="tab" data-view="matters" aria-selected="false">5. What matters most</button>
+    <button role="tab" data-view="supply" aria-selected="false">6. Start and supply</button>
+    <button role="tab" data-view="timeline" aria-selected="false">7. Timeline and crust</button>
+    <button role="tab" data-view="minerals" aria-selected="false">8. Minerals and build-up</button>
+  </nav>
+  <nav class="tabs" role="tablist" id="tabs" hidden>
+    <button role="tab" data-view="envelope" aria-selected="false">1. Envelope</button>
+    <button role="tab" data-view="audit" aria-selected="false">2. Audit</button>
+    <button role="tab" data-view="handoffs" aria-selected="false">3. Handoffs</button>
+    <button role="tab" data-view="surfaces" aria-selected="false">4. Mineral surfaces</button>
+    <button role="tab" data-view="zoom" aria-selected="false">5. T2 and T3 up close</button>
+    <button role="tab" data-view="ladder" aria-selected="false">6. Ladder and elements</button>
+    <button role="tab" data-view="preservation" aria-selected="false">7. Preservation, S6</button>
+    <button role="tab" data-view="regimes" aria-selected="false">8. Regimes and vocabulary</button>
+    <button role="tab" data-view="params" aria-selected="false">9. Parameters and sources</button>
+    <button role="tab" data-view="export" aria-selected="false">10. Export and import</button>
+    <button role="tab" data-view="eco" aria-selected="false">11. Ecosystem and time left</button>
+    <button role="tab" data-view="matters" aria-selected="false">12. What matters most</button>
+    <button role="tab" data-view="supply" aria-selected="false">13. Start and supply</button>
+    <button role="tab" data-view="timeline" aria-selected="false">14. Timeline and crust</button>
+    <button role="tab" data-view="minerals" aria-selected="false">15. Minerals and build-up</button>
+  </nav>
+</header>
+
+<main>
+
+
+<!-- ============ G1. START HERE ============ -->
+<section class="view active" id="v-start">
+  <div class="hero">
+    <p class="eyebrow">Start here</p>
+    <h2 class="hero-title">Was there time for life to start, and to try more than once?</h2>
+    <p class="lede">The model follows the chemistry one step at a time and asks, at each step, whether a molecule is passed on before it falls apart. It counts how long each step takes, adds the time needed to grow the community LUCA lived in, and compares the sum with the window between the first liquid water and LUCA. Whatever time is left over tells how many times the whole story could have started and stopped before the one we descend from.</p>
+    <div class="kpis" id="startKpis"></div>
+  </div>
+
+  <div class="card">
+    <h2>Three choices are enough to begin</h2>
+    <p class="sub">Everything else keeps a sensible default. You can open the detailed settings at the bottom of each page.</p>
+    <div class="grid g-3">
+      <div class="field">
+        <label><span class="flabel">1. How long is the window?</span></label>
+        <div class="seg" id="gWindowSeg"></div>
+        <div class="hint" id="gWindowHint"></div>
+      </div>
+      <div class="field">
+        <label><span class="flabel">2. How hard is the chemistry?</span></label>
+        <div class="seg" id="gChemSeg"></div>
+        <div class="hint" id="gChemHint"></div>
+      </div>
+      <div class="field">
+        <label><span class="flabel">3. How complex was LUCA's community?</span></label>
+        <div class="seg" id="gEcoSeg"></div>
+        <div class="hint" id="gEcoHint"></div>
+      </div>
+    </div>
+  </div>
+
+  <div class="note conf-legend">
+    <strong>Confidence stars.</strong> Every choice and every step carries one to three stars.
+    <span class="stars s3">&#9733;&#9733;&#9733;</span> measured or tightly bounded (Tier A).
+    <span class="stars s2">&#9733;&#9733;<span class="off">&#9734;</span></span> order of magnitude from published work (Tier B).
+    <span class="stars s1">&#9733;<span class="off">&#9734;&#9734;</span></span> a judgement made for this model (Tier C).
+    A step gets the stars of its weakest input. A total gets the stars of the weakest term that makes up at least a tenth of it, because a doubtful term that is tiny cannot move the total. Hover over the stars to see why.
+  </div>
+
+  <div class="sec-head">
+    <h2>Six settings, one window (plus two hypothetical ones below)</h2>
+    <p class="sub">Each bar is the window drawn to scale. Coloured blocks are the time one run to LUCA's community needs. Hollow blocks are further runs of the same length that would still fit: tries that could have started and stopped. Click a setting to follow its chemistry step by step.</p>
+  </div>
+  <div class="cards-6" id="scenarioCards"></div>
+
+  <div class="sec-head" style="margin-top:26px">
+    <h2>Two hypothetical settings</h2>
+    <p class="sub">Not places anyone has proposed, but questions put to the model. Scenario 7 lets the model pick any mix of the known conditions that gives the shortest time and the most tries. Scenario 8 lets it invent a helper (an ion, molecule or catalyst) for any one link, to show which link we may be underrating.</p>
+  </div>
+  <div class="cards-6 cards-2" id="hypoCards"></div>
+  <div class="card hypo-detail" id="hypoDetail" style="margin-top:14px">
+    <h2>Scenario 7: the best mix of known conditions</h2>
+    <p class="sub">The model may take the time to appear (T1) from one setting and the number of sites from another, and choose any driving cycle, temperature, mineral or mineral mix, pH, salinity and confinement. It changes one choice at a time and keeps any change that helps, for three rounds. Biology (T4 and T5) is not up for choice.</p>
+    <div class="field"><label><span class="flabel">Handoffs (the named molecules for each step)</span></label><div class="seg" id="hypoHandSeg">
+      <button data-v="best" aria-pressed="true">The model may pick any known handoff</button><button data-v="yours" aria-pressed="false">Keep the handoffs I set</button></div></div>
+    <div class="kpis" id="hypo7Kpis"></div>
+    <div class="tbl-wrap" style="margin-top:10px"><table class="data" id="tblHypo7"></table></div>
+    <h2 style="margin-top:22px">Scenario 8: invented chemistry</h2>
+    <p class="sub">An invented helper makes one link this many times faster. For each setting, the table shows how much time the helper would save on each link. The largest saving points to the link where an unknown reaction would matter most. Hypothetical: no such helper has been shown.</p>
+    <div id="hypoKField"></div>
+    <div class="kpis" id="hypo8Kpis"></div>
+    <div class="tbl-wrap" style="margin-top:10px"><table class="data" id="tblHypo8"></table></div>
+    <p class="hint" id="hypo8Read" style="margin-top:8px"></p>
+  </div>
+
+  <details class="more">
+    <summary>More detailed settings</summary>
+    <div class="grid g-2" id="gStartMore"></div>
+  </details>
+  <div class="note" style="margin-top:16px">Every parameter, figure and source is still there. Choose <strong>Full workbench</strong> at the top of the page to see all of it. Both views use the same model and the same settings.</div>
+</section>
+
+<!-- ============ G2. FOLLOW ONE SETTING ============ -->
+<section class="view" id="v-story">
+  <div class="sec-head">
+    <p class="eyebrow">Follow one setting</p>
+    <h2>How the chemistry is filtered, step by step</h2>
+    <p class="sub">Pick a setting, then step through. Each step shows where it happens, which named molecule stands for it, how fast it forms against how long it lasts, and how many tries it costs. Use the arrow keys or the buttons.</p>
+  </div>
+  <div class="chips" id="storyScenarios"></div>
+  <div class="story-grid">
+    <div class="fig story-scene"><div class="fig-body" id="storyScene"></div>
+      <div class="stepper">
+        <button class="btn" id="storyPrev">Back</button>
+        <div class="dots" id="storyDots"></div>
+        <button class="btn primary" id="storyNext">Next step</button>
+      </div>
+    </div>
+    <div class="card story-panel" id="storyPanel"></div>
+  </div>
+  <div class="route" id="storyRoute"></div>
+  <div class="legend-row">
+    <span class="pill e">about 1</span> passes on the first try
+    <span class="pill m">about 1, on a surface</span> passes only with a mineral surface
+    <span class="pill h">about 1,000</span> a bottleneck: many tries per success
+    <span class="pill na">time, not tries</span> a slow step that simply takes time
+    <span class="stars s2" style="margin-left:10px">&#9733;&#9733;<span class="off">&#9734;</span></span> confidence, one to three stars
+  </div>
+  <details class="more">
+    <summary>More detailed settings</summary>
+    <div class="grid g-2" id="gStoryMore"></div>
+  </details>
+</section>
+
+<!-- ============ G3. MOLECULES AND CYCLES ============ -->
+<section class="view" id="v-cycles">
+  <div class="sec-head" id="hardSec">
+    <p class="eyebrow">Easy and hard chemistry</p>
+    <h2>What makes a step hard?</h2>
+    <p class="sub">A step is hard when its product breaks down faster than the next step can use it, or when the element is hard to get in the first place. The two chemistry choices on the start page use the same rule and the same steps. They only differ in which molecule stands for each step, and in how many successes are needed.</p>
+  </div>
+  <div class="card">
+    <h2>Default and hard, side by side</h2>
+    <p class="sub">The default picks, for each step, a molecule with a known easy route. The hard choice swaps three steps for the slowest well-studied molecule of nitrogen, phosphorus and carbon, and asks for a billion successes instead of one. Step S1 (a sulfur compound, H2) is the same in both.</p>
+    <div class="tbl-wrap"><table class="data" id="tblHard"></table></div>
+    <p class="hint" id="hardSum" style="margin-top:10px"></p>
+  </div>
+  <div class="card" style="margin-top:16px">
+    <h2>Element by element, from S0 to S5 <span class="conf-inline" id="elemStars"></span></h2>
+    <p class="sub">How hard each step is for each element in the Hadean, from getting the element into water (S0) to copying with selection (S5). Teal tags mark where the default chemistry takes its molecule, red tags where the hard chemistry takes its molecule. Hydrogen, oxygen, sulfur and iron have no hard step between S0 and S5. Carbon, nitrogen, phosphorus, nickel and magnesium each have one. The hard chemistry puts its slow molecules at carbon, nitrogen and phosphorus, the three every cell needs in its core chemistry.</p>
+    <div class="tbl-wrap" id="elemGrid"></div>
+    <div class="legend-row"><span class="pill e">easy</span> no real barrier <span class="pill m">medium</span> works, but only under some conditions <span class="pill h">hard</span> the element's chokepoint</div>
+  </div>
+
+  <div class="sec-head" style="margin-top:30px">
+    <p class="eyebrow">The one rule</p>
+    <h2>Pass or perish: it must form before it breaks</h2>
+    <p class="sub">For every handoff the model compares two times: how long a product takes to form, and how long it survives. Their ratio sets the chance that one attempt succeeds. Pick one of the twelve named handoffs, or drag the sliders.</p>
+  </div>
+  <div class="card">
+    <div class="chips" id="ppChips"></div>
+    <div class="grid g-2" style="margin-top:14px">
+      <div class="field"><label><span class="flabel">Time to form</span><output id="ppFormV"></output></label>
+        <input type="range" id="ppForm" min="-200" max="1600" step="1" aria-label="Time to form, logarithmic"></div>
+      <div class="field"><label><span class="flabel">Time it survives</span><output id="ppSurvV"></output></label>
+        <input type="range" id="ppSurv" min="-200" max="1600" step="1" aria-label="Time it survives, logarithmic"></div>
+    </div>
+    <div class="pp-bar" id="ppBar" aria-label="Chance per attempt"></div>
+    <div class="kpis" id="ppOut" style="margin-top:12px"></div>
+    <p class="hint" id="ppNote" style="margin-top:10px"></p>
+  </div>
+
+  <div class="sec-head" style="margin-top:30px">
+    <p class="eyebrow">Environmental cycles</p>
+    <h2>Which cycle drives the tries, and does it matter?</h2>
+    <p class="sub">Each place gets one try per cycle, so faster cycles mean more tries. Each cell is the total time in Myr for that setting under that cycle. Green fits the window, amber fits only at the fast end, red needs more time. A solid outline marks the main cycle of that setting, a dashed one a plausible cycle, and faded cells are cycles that do not fit the setting physically (a judgement, Tier C). Click a column title to use that cycle in the whole model.</p>
+  </div>
+  <div class="card">
+    <div class="field"><label><span class="flabel">Chemistry for the map</span></label><div class="seg" id="mapChemSeg"></div></div>
+    <div class="tbl-wrap" id="cycleMap"></div>
+    <p class="hint" id="cycleRead" style="margin-top:10px"></p>
+  </div>
+  <div class="card" style="margin-top:16px">
+    <h2>How the cycles were judged</h2>
+    <div class="explain">
+      <p><strong>What a cycle does.</strong> Each place gets one try per cycle: one drying, one tide, one heat pulse. So the wait for luck is the number of tries needed, divided by the number of places, times the length of one cycle. A cycle twice as fast halves the wait. The cycle enters only this one term, T3.</p>
+      <p><strong>How long a cycle is.</strong> Each length is taken from published estimates for the Hadean, listed below. The fastest (a local hot and cold pulse, about 17 minutes) and the slowest (a pumice raft drifting to a beach, about two years) differ by about 60,000 times. That is the most a change of cycle can do.</p>
+      <p><strong>Which cycles fit which setting.</strong> Not every cycle exists in every place. A deep vent has no wet and dry; a pool has no raft transit. The main and plausible cycles for each setting are a judgement made for this model <span class="stars s1">&#9733;<span class="off">&#9734;&#9734;</span></span>.</p>
+      <p><strong>Cycles against surfaces.</strong> A surface works differently. It changes the chance that each step passes, and the chances of all steps multiply, so a surface can change the wait for luck by far more than a cycle can. Both only show in the total when the wait for luck is longer than the slow biology and the ecosystem together (about 17 Myr with the defaults). With the default chemistry neither shows. With the hard chemistry both do, and in every setting here the surface changes the wait for luck more than the cycle does.</p>
+    </div>
+    <div class="tbl-wrap"><table class="data" id="tblCycles"></table></div>
+    <h3 class="mini-h">Cycle or surface: which changes more?</h3>
+    <p class="sub">For the chemistry chosen above the map. The first two numbers are how many times the wait for luck changes. The last column tells whether that change is big enough to move the total time.</p>
+    <div class="tbl-wrap"><table class="data" id="tblCycleSurf"></table></div>
+  </div>
+  <div class="card" style="margin-top:16px" id="currencySec">
+    <h2>A second role: the cycle as currency <span class="conf-inline" id="curStars"></span></h2>
+    <p class="sub">So far a cycle is only a clock: it says how often a place gets a try. A drying cycle can also pay for a step. Each drying pulls water out so that building blocks can join, and each rewetting can break some of what was made. Switch this on to let the cycle pay for the joining step, the RNA oligomer handoff (H10 free, H11 on a mineral), wherever it is used (step S5 by default).</p>
+    <div class="explain">
+      <p><strong>How it is counted.</strong> Each cycle joins a share y of the building blocks and breaks a share d of the product. So one bond takes about <code>cycle length / y</code> to form, and the product survives about <code>cycle length / d</code>, or less if it also breaks down in water between dryings. The chance that a bond is made before it is lost is then close to <code>y / (y + d)</code>. For a product with several bonds, the chances multiply.</p>
+      <p><strong>What changes.</strong> Two things. The chance of the joining step now depends on the yield and the loss per cycle, and on the cycle length when the product also breaks down between dryings, as on a slow pumice raft. And the time for the step (part of T2) grows with the cycle length. Cycles that do not dry (local heat pulses, pH and redox at interfaces) do not pay in this way, unless you choose otherwise below.</p>
+    </div>
+    <div class="grid g-2" style="margin-top:12px">
+      <div class="field"><label><span class="flabel">Role of the cycle</span></label>
+        <div class="seg" id="curRoleSeg">
+          <button data-v="clock" aria-pressed="true">Clock only</button>
+          <button data-v="currency" aria-pressed="false">Clock and currency</button>
+        </div>
+        <div class="hint">Applies to the whole model, including the workbench and the What matters most page.</div></div>
+      <div class="field"><label><span class="flabel">Which cycles pay</span></label>
+        <div class="seg" id="curCyclesSeg">
+          <button data-v="drying" aria-pressed="true">Only cycles that dry</button>
+          <button data-v="all" aria-pressed="false">Every cycle</button>
+        </div>
+        <div class="hint">Wet and dry, day and night, tides and raft beaching dry. Every cycle is a stress test, with no data behind it.</div></div>
+    </div>
+    <div class="field"><label><span class="flabel">Where the yield per cycle comes from</span></label>
+      <div class="seg" id="curSrcSeg"></div>
+      <div class="hint" id="curSrcHint"></div></div>
+    <div class="grid g-2" id="curFields"></div>
+    <h3 class="mini-h">Clock only, against clock and currency, for each setting with its own main cycle</h3>
+    <p class="hint">Each cell shows the value with the cycle as a clock only, then "to" the value with the cycle as clock and currency. The chance is per product, for the joining step.</p>
+    <div class="tbl-wrap"><table class="data" id="tblCurrency"></table></div>
+    <p class="hint" id="curTotNote" style="margin-top:8px"></p>
+    <p class="hint" id="curRead" style="margin-top:10px"></p>
+    <div class="grid g-2" style="margin-top:14px">
+      <div class="fig"><div class="fig-head"><div><h2>Yield against the number of cycles</h2>
+        <p class="sub">For the yield and loss set above, on the wet and dry cycle. Log scales.</p></div>
+        <div class="fig-tools" data-fig="currency"><button class="btn sm" data-dl="svg">SVG</button><button class="btn sm" data-dl="png">PNG</button></div></div>
+        <div class="fig-body" id="figCurrency"></div></div>
+      <div class="explain">
+        <p><strong>Which data would set it.</strong> One kind of experiment sets both numbers: run the same pool chemistry for 1, 3, 10, 30, 100 and 300 cycles, and measure the yield each time.</p>
+        <p><strong>The first few cycles give y.</strong> The yield climbs by about y per cycle at the start. Eiby 2025 gives one point: after five one-hour cycles at 80 C, 0.1 to 1.2 per cent, with no catalyst (the grey bar).</p>
+        <p><strong>The level it reaches gives the chance per bond.</strong> After many cycles, making and breaking balance, and the yield levels off at <code>y / (y + d)</code>. That level is the chance per bond itself, so d follows from it. No one has yet run a series long enough to see it for non-activated nucleotides.</p>
+        <p><strong>The lengths give the bonds needed.</strong> Sequencing the products (nanopore, mass spectrometry) shows how fast the chance falls with each extra unit. The same total time with short and long cycles separates what the cycle pays for from what time alone does.</p>
+      </div>
+    </div>
+  </div>
+  <details class="more">
+    <summary>More detailed settings</summary>
+    <div class="grid g-2" id="gCycleMore"></div>
+  </details>
+</section>
+
+<!-- ============ G4. ECOSYSTEM AND TIME LEFT ============ -->
+<section class="view" id="v-eco">
+  <div class="sec-head">
+    <p class="eyebrow">Two new steps in the audit</p>
+    <h2>LUCA's ecosystem, and the time left over</h2>
+    <p class="sub">When LUCA is first seen it was already part of a community (Moody et al. 2024). Building that community takes time, which is now the fifth term of the audit, T5. Whatever the window leaves after T1 to T5 is the time left, and it tells how many full runs could have fitted.</p>
+  </div>
+  <div class="grid g-side">
+    <div>
+      <div class="card">
+        <h2>How complex was the community?</h2>
+        <p class="sub">X kinds of organisms, linked by Y interactions</p>
+        <div class="field"><label><span class="flabel">How the ecosystem time is found</span></label>
+          <div class="seg" id="ecoModeSeg">
+            <button data-v="computed" aria-pressed="true">From X and Y</button>
+            <button data-v="direct" aria-pressed="false">Set directly</button>
+            <button data-v="off" aria-pressed="false">Leave out</button>
+          </div></div>
+        <div id="gEcoMain"></div>
+        <div class="field" id="gSplitField">
+          <label><span class="flabel">How long one lineage takes to split into two</span></label>
+          <div class="seg wrap" id="gSplitSeg"></div>
+          <div style="margin-top:8px;display:flex;gap:8px;align-items:center;font-size:13px"><input type="number" id="gSplitMyr" min="0.05" step="0.1" style="width:90px"> Myr, or type your own</div>
+          <p class="hint" id="gSplitRead"></p>
+        </div>
+        <div id="ecoWarn"></div>
+        <div class="field"><label><span class="flabel">Do links form while new kinds appear?</span></label>
+          <div class="seg" id="ecoOverlapSeg">
+            <button data-v="yes" aria-pressed="true">Yes, at the same time</button>
+            <button data-v="no" aria-pressed="false">No, one after the other</button>
+          </div>
+          <div class="hint">At the same time, the longer of the two counts. One after the other, both are added.</div></div>
+        <div class="field"><label><span class="flabel">Must a new try wait for the setting again?</span></label>
+          <div class="seg" id="restartSeg">
+            <button data-v="no" aria-pressed="true">No, the setting stays</button>
+            <button data-v="yes" aria-pressed="false">Yes, T1 again</button>
+          </div>
+          <div class="hint">A vent field lasts, so a new try can start straight away. A crater lake or a pool may have to form again first.</div></div>
+        <details class="more inner">
+          <summary>More detailed settings</summary>
+          <div id="gEcoMore"></div>
+        </details>
+      </div>
+    </div>
+    <div>
+      <div class="kpis" id="ecoKpis"></div>
+      <div class="grid eco-figs" style="margin-top:16px">
+        <div class="fig"><div class="fig-body" id="figEcoNet"></div></div>
+        <div class="fig"><div class="fig-body" id="figEcoCurve"></div></div>
+      </div>
+    </div>
+  </div>
+
+  <div class="fig" style="margin-top:22px">
+    <div class="fig-head"><div><h2>Time left, and how many times life could have tried</h2>
+      <p class="sub">Linear scale, so the length of each block can be compared by eye</p></div>
+      <div class="fig-tools" data-fig="timeLeft"><button class="btn sm" data-dl="svg">SVG</button><button class="btn sm" data-dl="png">PNG</button></div></div>
+    <div class="fig-body" id="figTimeLeft"></div>
+  </div>
+  <div class="card" style="margin-top:18px"><div class="tbl-wrap"><table class="data" id="tblTimeLeft"></table></div></div>
+
+  <div class="grid g-2" style="margin-top:18px">
+    <div class="card">
+      <h2>How T5 is worked out</h2>
+      <p class="sub">Two simple rules, both Tier C</p>
+      <p><strong>New kinds.</strong> One kind of cell splits into two at a rate lambda per lineage per Myr, and each new kind keeps splitting. Reaching X kinds takes about <code>ln(X) / lambda</code>. With 5 kinds and lambda 0.1 that is 16 Myr. Modern bacteria split only a little faster than they go extinct, at about 0.03 to 0.05 per lineage per Myr (<a href="https://pubmed.ncbi.nlm.nih.gov/30061564/" target="_blank" rel="noopener">Louca et al. 2018</a>), and prokaryote lineages grow at a steady rate without filling up (<a href="https://pubmed.ncbi.nlm.nih.gov/27965376/" target="_blank" rel="noopener">Marin et al. 2017</a>).</p>
+      <p><strong>New links.</strong> X kinds can form <code>X(X-1)/2</code> pairs. A pair that does not yet interact starts to at a rate r per Myr. To link a share C of all pairs takes <code>-ln(1-C) / r</code>. Half the pairs take 0.7 times 1/r, nine in ten take 2.3 times 1/r, and nearly all take for ever. In the laboratory one cross-feeding partnership evolved within about 800 to 6,500 generations (<a href="https://pmc.ncbi.nlm.nih.gov/articles/PMC7728234/" target="_blank" rel="noopener">summary of Helling 1987 and Rozen and Lenski 2000</a>), so years, not millions of years, are a fast upper end.</p>
+      <p><strong>Together.</strong> T5 is the longer of the two (or both added), plus any extra time you choose. Like T4 it is the same for every setting.</p>
+    </div>
+    <div class="card">
+      <h2>How time left and tries are worked out</h2>
+      <p class="sub">Read these as orders of magnitude</p>
+      <p><strong>Time left</strong> is the window minus T1 + T2 + T3 + T4 + T5.</p>
+      <p><strong>One full try</strong> is T2 + T3 + T4 + T5, because once a setting exists it stays. With the switch on the left, every new try also waits T1.</p>
+      <p><strong>Tries that fit</strong> is the time open for tries divided by one try, rounded down. One of them is ours; the rest are <strong>tries that stopped</strong>: runs that could have reached the same complexity and then died out or were overtaken, leaving no descendants.</p>
+      <p><strong>Chance it fits</strong> treats waiting for luck (T3) as random: the wait for n successes follows a gamma distribution with mean T3. All other terms are taken at their central values, so this is a lower bound on the real uncertainty.</p>
+      <p class="hint">Not counted: tries running side by side in different places, which would multiply the number, and the reasons a try stops, which the model does not give.</p>
+    </div>
+  </div>
+</section>
+
+
+<!-- ============ G5. WHAT MATTERS MOST ============ -->
+<section class="view" id="v-matters">
+  <div class="sec-head">
+    <p class="eyebrow">Where new data would help most</p>
+    <h2>What matters most, for the choices you have made</h2>
+    <p class="sub">The app moves one input at a time across its plausible range and keeps every other input as you have set it: window, chemistry, surfaces, cycle, community size and the cycle's role. For each input it asks two things. How many times does the total time change? And does any setting move into or out of the window? It reruns every time you change something, on any page.</p>
+  </div>
+  <div class="card">
+    <div class="field"><label><span class="flabel">Test for</span></label><div class="chips" id="mattersScope"></div></div>
+    <div class="kpis" id="mattersKpis"></div>
+    <p class="hint" id="mattersRead" style="margin-top:12px"></p>
+  </div>
+  <div class="card" style="margin-top:16px">
+    <div class="fig-head" style="padding:0;border:0"><div><h2>Inputs ranked by how much they move the total</h2></div>
+      <div class="fig-tools"><button class="btn sm" id="dlMatters">CSV</button></div></div>
+    <p class="sub">The bar is drawn on a log scale: each step is ten times more change. Stars are the confidence in the input today. Red names are settings that move into or out of the window across the range tested.</p>
+    <div class="tbl-wrap"><table class="data" id="tblMatters"></table></div>
+    <p class="hint" id="mattersStill" style="margin-top:10px"></p>
+  </div>
+  <div class="card" style="margin-top:16px">
+    <h2>How to read this</h2>
+    <div class="explain">
+      <p><strong>One at a time.</strong> Each input moves on its own, from the low to the high end of its plausible range, the same range the sliders use. Inputs that act together (for example the hard chemistry and having no surfaces) can do more together than either does alone.</p>
+      <p><strong>The best target for new data</strong> is an input near the top of the list with one star: it moves the result most and is known least well. An input near the top with three stars is already well known, so better data would change less.</p>
+      <p><strong>Not tested here.</strong> The window itself, the chemistry choice and the number of successes needed, because they are the choices the test is run for. Change them on the start page and watch the list change.</p>
+    </div>
+  </div>
+</section>
+
+<!-- ============ v7: START AND SUPPLY ============ -->
+<section class="view" id="v-supply">
+  <div class="sec-head">
+    <p class="eyebrow">First update, for the Geobiology section at GLOBE</p>
+    <h2>Start date, volatiles, boron and delivery from space</h2>
+    <p class="sub">Four additions. Each one is off, or set as before, until you switch it on, so earlier results do not change by themselves. Every choice below names the papers it rests on, and the stars give our confidence today.</p>
+  </div>
+
+  <div class="card" id="supStartCard">
+    <h2>1. When did the clock start?</h2>
+    <p class="sub">The start of the window used to be one named event, such as the first sign of liquid water at 4.40 Ga. Here it can be built instead from what happened after the last giant impact: how Earth grew, when the surface froze, and how long it took to take the thick CO2 atmosphere back into the rock.</p>
+    <div class="field"><label><span class="flabel">How to set the start</span></label>
+      <div class="seg" id="supStartSeg">
+        <button data-v="event" aria-pressed="true">A named event, as before</button>
+        <button data-v="build" aria-pressed="false">Build it from accretion and volatiles</button>
+      </div></div>
+    <div id="supBuild">
+      <div class="field"><label><span class="flabel">How Earth grew</span></label><div class="seg" id="supPathSeg"></div>
+        <p class="hint" id="supPathRead"></p></div>
+      <div class="grid g-2">
+        <div class="field"><label><span class="flabel">Moon-forming impact</span></label><div class="seg" id="supMoonSeg"></div></div>
+        <div class="field"><label><span class="flabel">Surface solid after</span></label><div class="seg" id="supSolidSeg"></div></div>
+      </div>
+      <div class="field"><label><span class="flabel">CO2 back into the rock (ingassing) after</span></label><div class="seg" id="supCo2Seg"></div></div>
+      <div class="grid g-2" id="supFields"></div>
+    </div>
+    <div class="kpis" id="supKpis" style="margin-top:12px"></div>
+    <div class="fig" style="margin-top:12px"><div class="fig-head"><div><h2>From the last giant impact to the start of the clock</h2>
+      <p class="sub">Time runs left to right, from old to young. Bars are the waits after the impact; ticks below are dated evidence.</p></div>
+      <div class="fig-tools" data-fig="start"><button class="btn sm" data-dl="svg">SVG</button><button class="btn sm" data-dl="png">PNG</button></div></div>
+      <div class="fig-body" id="figStart"></div></div>
+    <p class="hint" id="supStartRead" style="margin-top:8px"></p>
+    <h3 style="margin-top:18px">Checks against the rock record</h3>
+    <p class="sub">The start is compared with dated evidence. These are checks, not inputs: the start is not forced to match them.</p>
+    <div class="tbl-wrap"><table class="data" id="tblEvidence"></table></div>
+  </div>
+
+  <div class="card" style="margin-top:16px">
+    <h2>2. How much water sat on top: ocean depth and dry land</h2>
+    <p class="sub">Ingassing also decides how much water stays at the surface and how much goes into the mantle. A deep ocean drowns the continents; a shallow one leaves land. Only settings that need dry land are affected, through the land factor on T1.</p>
+    <div class="field"><label><span class="flabel">Ocean view</span></label><div class="seg" id="supOceanSeg"></div></div>
+    <p class="hint" id="supOceanRead"></p>
+  </div>
+
+  <div class="card" style="margin-top:16px">
+    <h2>3. Boron and the ribose step</h2>
+    <p class="sub">Ribose, the sugar in RNA, breaks down within hours to days in warm, alkaline water. Borate binds it and makes it last longer. The default chain has no sugar step, so boron cannot matter until the ribose step is switched on.</p>
+    <div class="grid g-2">
+      <div class="field"><label><span class="flabel">Ribose step</span></label><div class="seg" id="supRiboseSeg">
+        <button data-v="off" aria-pressed="true">Off, as before</button><button data-v="on" aria-pressed="false">On: ribose must last (H6)</button></div></div>
+      <div class="field"><label><span class="flabel">Where borate acts</span></label><div class="seg" id="supBorWhereSeg">
+        <button data-v="collects" aria-pressed="true">Where it can collect</button><button data-v="all" aria-pressed="false">Everywhere (stress test)</button></div></div>
+    </div>
+    <div class="field"><label><span class="flabel">Borate level</span></label><div class="seg" id="supBorSeg"></div></div>
+    <div id="supBorFields"></div>
+    <div class="tbl-wrap"><table class="data" id="tblBoron"></table></div>
+    <p class="hint" id="supBorRead" style="margin-top:8px"></p>
+  </div>
+
+  <div class="card" style="margin-top:16px">
+    <h2>4. Delivery from space as a shortcut</h2>
+    <p class="sub">Meteorites, comets and dust bring ready-made molecules: nucleobases, amino acids, sugars, HCN and, from interstellar ice, short peptides. Where they land intact they can stand in for one or more steps of the ladder. In the model this is a second route that runs next to making things in place, and the faster of the two shows.</p>
+    <div class="field"><label><span class="flabel">What arrives</span></label><div class="seg" id="supDelSeg"></div>
+      <p class="hint" id="supDelRead"></p></div>
+    <div class="grid g-2">
+      <div class="field"><label><span class="flabel">Steps it stands in for</span></label><div class="chips" id="supDelCover"></div></div>
+      <div class="field"><label><span class="flabel">Which settings receive it</span></label><div class="seg" id="supDelWhereSeg">
+        <button data-v="receiving" aria-pressed="true">Ponds, crater lakes and ice</button><button data-v="all" aria-pressed="false">Every setting (stress test)</button></div></div>
+    </div>
+    <div class="field"><label><span class="flabel">Can the covered steps also happen in place?</span></label><div class="seg" id="supDelBlockSeg">
+      <button data-v="no" aria-pressed="true">Yes, both routes run</button><button data-v="yes" aria-pressed="false">No, only by delivery</button></div>
+      <p class="hint">Choose "only by delivery" for a world where, for example, no HCN could form or last, so nucleobases could only come from space.</p></div>
+    <div class="grid g-2" id="supDelFields"></div>
+    <div class="tbl-wrap"><table class="data" id="tblDelivery"></table></div>
+    <p class="hint" id="supDelNote" style="margin-top:8px"></p>
+  </div>
+
+  <div class="card" style="margin-top:16px">
+    <h2>The literature choices behind this page</h2>
+    <p class="sub">Where the literature offers more than one reading, each reading is a button above. This table lists them with their sources.</p>
+    <div class="tbl-wrap"><table class="data" id="tblSupplyLit"></table></div>
+  </div>
+
+  <div class="card" style="margin-top:16px">
+    <h2>How these enter the model</h2>
+    <div class="explain" id="supExplain"></div>
+  </div>
+</section>
+
+<section class="view" id="v-timeline">
+  <div class="sec-head">
+    <p class="eyebrow">Second update, for the Geobiology section at GLOBE</p>
+    <h2>Timeline: a younger start, the crust and the environment</h2>
+    <p class="sub">Three additions. A younger start date read from Korenaga 2021, a choice of published curves for how felsic (granite-like) or basaltic the exposed crust was over time, and a timeline where one bar reads every environmental track at the same moment. New links are off until you switch them on, so earlier results do not change by themselves.</p>
+  </div>
+
+  <div class="card">
+    <h2>1. A younger start, and when dry land is there</h2>
+    <p class="sub">Korenaga 2021 asks whether there was land on the early Earth. Up to about 20 per cent of the surface may have been land in the mid-Hadean, but in the late Hadean and early Archean exposed land was probably limited to isolated ocean islands, and there is no accepted record of regionally expansive land before 3.0 Ga. The paper gives no start date for life; the two younger starts below are our reading of it.</p>
+    <div class="field"><label><span class="flabel">Start of the clock</span></label><div class="seg" id="tlStartSeg"></div></div>
+    <div class="field"><label><span class="flabel">LUCA date (the end of the window)</span></label><div class="seg" id="tlFarSeg"></div></div>
+    <p class="hint" id="tlStartRead"></p>
+    <h3>Only for settings that need dry land</h3>
+    <p class="sub">Instead of moving the start for everyone, you can keep the start and make only the land-based settings wait for land. Their time to appear (T1) grows by the wait.</p>
+    <div class="field"><label><span class="flabel">Dry land is there from</span></label><div class="seg" id="tlLandSeg"></div></div>
+    <p class="hint" id="tlLandRead"></p>
+  </div>
+
+  <div class="card" style="margin-top:16px">
+    <h2>2. Felsic or basaltic crust over time</h2>
+    <p class="sub">Basalt weathers to iron-rich smectite clays and iron oxides and supplies Fe, Mg and Ni. Felsic, granite-like rock weathers to kaolinite, illite and quartz and is where borate minerals form. Four published records disagree on when the crust turned felsic, so each is a choice. The share is read at the chemistry time: the start date, or a time set from the timeline below.</p>
+    <div class="field"><label><span class="flabel">Crust curve</span></label><div class="seg" id="tlFelsicSeg"></div></div>
+    <div id="tlFelsicFields"></div>
+    <div class="grid g-2">
+      <div class="field"><label><span class="flabel">Crust sets how much borate can collect</span></label><div class="seg" id="tlBoronSeg"></div></div>
+      <div class="field"><label><span class="flabel">Crust sets the minerals in settings on land</span></label><div class="seg" id="tlMixSeg"></div></div>
+    </div>
+    <div class="fig" style="margin-top:8px"><div class="fig-head"><div><h2>Felsic share of the exposed crust</h2>
+      <p class="sub">The thick line is the curve in use; the shaded band is the window; the gold line is where the chemistry reads the crust.</p></div>
+      <div class="fig-tools" data-fig="felsic"><button class="btn sm" data-dl="svg">SVG</button><button class="btn sm" data-dl="png">PNG</button></div></div><div class="fig-body" id="figFelsic"></div></div>
+    <p class="hint" id="tlFelsicRead" style="margin-top:8px"></p>
+  </div>
+
+  <div class="card" style="margin-top:16px">
+    <h2>3. Timeline with a bar across every track</h2>
+    <p class="sub">Each track has its own scale. Drag the gold bar to read every track at the same time. Switch tracks on or off with the buttons, and choose between published curves where they disagree. Dashed lines are held flat or extended beyond what the source covers.</p>
+    <div class="chips" id="tlTrackChips"></div>
+    <div class="grid g-2" id="tlTrackOpts"></div>
+    <div class="field"><label><span class="flabel">Time range</span></label><div class="seg" id="tlRangeSeg"></div></div>
+    <div class="fig"><div class="fig-head"><div><h2>Environmental tracks from 4.6 Ga</h2>
+      <p class="sub" id="tlCursorRead"></p></div>
+      <div class="fig-tools" data-fig="timeline"><button class="btn sm" data-dl="svg">SVG</button><button class="btn sm" data-dl="png">PNG</button></div></div><div class="fig-body" id="figTimeline" tabindex="0"></div></div>
+    <div class="btn-row" style="margin-top:10px">
+      <button class="btn primary" id="tlUseBtn">Use the conditions at this time</button>
+      <button class="btn" id="tlToStart">Move the bar to the start</button>
+      <button class="btn" id="tlResetBtn">Read the crust at the start date again</button>
+    </div>
+    <p class="hint" id="tlUseRead" style="margin-top:8px"></p>
+    <div class="tbl-wrap" style="margin-top:10px"><table class="data" id="tblTimelineRead"></table></div>
+    <h3 style="margin-top:18px">What each track rests on</h3>
+    <div class="tbl-wrap"><table class="data" id="tblTimelineLit"></table></div>
+  </div>
+</section>
+
+<section class="view" id="v-minerals">
+  <div class="sec-head">
+    <p class="eyebrow">Second update, for the Geobiology section at GLOBE</p>
+    <h2>Minerals, physical conditions and molecular build-up</h2>
+    <p class="sub">How a mix of minerals, and how tightly molecules are confined on them, changes what is held, protected and still able to react. How temperature, salt, pH, Mg2+ and porosity act on active sites, binding strength and the activity of dimers and polymers. And a new optional step, molecular build-up: whether a chain can grow long before it is lost.</p>
+  </div>
+
+  <div class="card">
+    <h2>1. Mineral mix and confinement</h2>
+    <p class="sub">Set the weight of each mineral, or start from a preset. Each mineral holds phosphate-bearing molecules with its own binding strength, and the mix adds them up. Confinement is the share of bound molecules held in interlayers, narrow pores or at edge and step sites: better protected, but less free to react.</p>
+    <div class="field"><label><span class="flabel">Start from</span></label><div class="seg wrap" id="mxPresetSeg"></div></div>
+    <div class="mx-grid" id="mxSliders"></div>
+    <div class="field" style="margin-top:12px"><label><span class="flabel">Use this mix on the surface steps of every setting?</span></label><div class="seg" id="mxUseSeg"></div></div>
+    <div class="grid g-2" id="mxConfFields"></div>
+    <div class="kpis" id="mxKpis" style="margin-top:12px"></div>
+    <p class="hint" id="mxRead" style="margin-top:8px"></p>
+    <div class="tbl-wrap" style="margin-top:8px"><table class="data" id="tblMix"></table></div>
+  </div>
+
+  <div class="card" style="margin-top:16px">
+    <h2>2. Zoom in on the physical conditions</h2>
+    <p class="sub">Pick one condition to sweep. The four panels show what it does to the mix above: free active sites, binding strength and share held, the activity and breaking of bound dimers and polymers, and the chance of building a chain on a tidal flat. The gold line is the value set now. Jelavic et al. 2017 measured, by force spectroscopy, that nucleobases bind most strongly to clay basal faces, while phosphate binds to Al- and Fe-rich edges and may loosen the bond being made; Sand et al. 2024 find that salt and Mg2+ or Ca2+ raise adsorption on negative faces.</p>
+    <div class="field"><label><span class="flabel">Sweep</span></label><div class="seg" id="zmVarSeg"></div></div>
+    <div class="grid g-2" id="zmFields"></div>
+    <div class="fig"><div class="fig-head"><div><h2>What one condition does</h2><p class="sub">Log scales. Dashed lines are the second quantity in each panel.</p></div>
+      <div class="fig-tools" data-fig="zoom"><button class="btn sm" data-dl="svg">SVG</button><button class="btn sm" data-dl="png">PNG</button></div></div><div class="fig-body" id="figZoom"></div></div>
+  </div>
+
+  <div class="card" style="margin-top:16px">
+    <h2>3. Molecular build-up: from joined units to a useful chain</h2>
+    <p class="sub">Joining two units (step S5) is not enough; a chain must grow to tens of units before it can do anything. In each wet and dry cycle a chain adds one unit with chance j, or comes off the mineral with chance exp(-alpha times length), and if it comes off it is caught again with a chance set by how much mineral is around. A chain that is not caught is lost. A bound chain also breaks now and then, less often where it is protected. This follows the model of Alejandre et al. 2025, with mineral loading from Sand et al. 2024 and the amino-acid uptake of Gregoire et al. 2016.</p>
+    <div class="grid g-2">
+      <div class="field"><label><span class="flabel">Build-up step in the audit</span></label><div class="seg" id="buOnSeg"></div></div>
+      <div class="field"><label><span class="flabel">What is built</span></label><div class="seg" id="buMolSeg"></div></div>
+    </div>
+    <div class="field"><label><span class="flabel">Where chains grow</span></label><div class="seg wrap" id="buWhereSeg"></div></div>
+    <div class="grid g-2">
+      <div class="field"><label><span class="flabel">Minerals</span></label><div class="seg" id="buMixSeg"></div></div>
+      <div class="field"><label><span class="flabel">Conditions</span></label><div class="seg" id="buCondSeg"></div></div>
+    </div>
+    <div class="grid g-2" id="buFields"></div>
+    <h3>Each place compared</h3>
+    <div class="tbl-wrap"><table class="data" id="tblVenues"></table></div>
+    <h3>Each setting, in its own place</h3>
+    <div class="tbl-wrap"><table class="data" id="tblBuildupSettings"></table></div>
+    <h3>Check against measured pore water</h3>
+    <p class="sub">Sand et al. 2024 measured how much DNA is left in the pore water after adsorption, at low DNA, for porosity 0.3 and 0.9. The model uses phosphate binding values, so this is a check, not a fit. Per cent left in the water:</p>
+    <div class="tbl-wrap"><table class="data" id="tblSand"></table></div>
+  </div>
+
+  <div class="card" style="margin-top:16px" id="buTidalCard">
+    <h2>4. Is a tidal zone a good place for build-up?</h2>
+    <p class="sub">You asked us to shoot it down if we could. We could not, but it has one serious problem.</p>
+    <h3>For</h3>
+    <ul class="plain-list">
+      <li>Tides give large wet and dry swings of intermediate period. Alejandre et al. 2025 find that oscillating conditions give chains of 10 to 24 units on average (up to 40), against 1 to 9 under constant conditions. Early tides were 4 to 8 times today's, the day was 10 to 12 hours, and spring tides came every 5 to 7 days.</li>
+      <li>Rivers bring a high load of mineral particles, so a chain that comes off is likely to be caught again on the next grain. A chlorite-rich river plume can strip more than half of the DNA from the water, while other minerals take only about a thousandth (Sand et al. 2024).</li>
+      <li>Where river water meets the sea, salt and Mg2+ or Ca2+ raise adsorption on negative clay faces, so the complex may survive settling (Sand et al. 2024). Edge and step sites hold DNA tighter and protect it better than open basal faces.</li>
+      <li>Once buried, the chain sits in a dense sediment with pore water, where molecules can move from basal faces to edge sites and between minerals.</li>
+    </ul>
+    <h3>Against</h3>
+    <ul class="plain-list">
+      <li>Land. Korenaga 2021 argues that in the late Hadean and early Archean exposed land was limited to isolated ocean islands. Small volcanic islands make small rivers, little felsic sediment and few broad tidal flats. This is the main problem, and it can be tested in card 1 of the timeline page by making land-based settings wait for land.</li>
+      <li>Dilution. Each flood can wash shed chains out to open water, where almost nothing catches them again.</li>
+      <li>Salt competes. Na+ crowds the surface, and above 60 C or below about 100 mM Na+ or 5 mM Mg2+, RNA duplexes come apart (Alejandre et al. 2025). That matters for copying more than for single chains.</li>
+      <li>UV. With no ozone, UV-C reaches an exposed flat (Ranjan and Sasselov 2017). Chains in the top millimetres of mud are shaded; chains on the surface are not.</li>
+    </ul>
+    <h3>What the model says now</h3>
+    <p class="hint" id="buTidalNums"></p>
+    <p class="hint">Our reading: the tidal zone is a strong candidate for the build-up step because it combines the two things the model rewards, drying that drives joining and a high mineral load that catches chains again. Its weak point is not the chemistry but whether enough land, rivers and sediment existed before 4.0 Ga.</p>
+  </div>
+</section>
+
+
+<!-- ============ 1. ENVELOPE ============ -->
+<section class="view" id="v-envelope">
+  <div class="grid g-side">
+    <div>
+      <div class="card">
+        <h2>Set the near end</h2>
+        <p class="sub">When could the chemistry have started at all</p>
+        <div class="field">
+          <label><span class="flabel">How to set it</span></label>
+          <div class="seg" id="nearModeSeg">
+            <button data-v="event" aria-pressed="true">Named event</button>
+            <button data-v="temperature" aria-pressed="false">Temperature</button>
+            <button data-v="manual" aria-pressed="false">By hand</button>
+            <button data-v="build" aria-pressed="false">From accretion</button>
+          </div>
+        </div>
+        <div class="field" id="nearBuildField" hidden>
+          <div class="hint" id="nearBuildHint"></div>
+          <button class="btn sm" id="goSupply" style="margin-top:8px">Set it on the start and supply page</button>
+        </div>
+        <div class="field" id="nearEventField">
+          <label><span class="flabel">Planetary event</span></label>
+          <select id="nearEvent"></select>
+          <div class="hint" id="nearEventHint"></div>
+        </div>
+        <div id="nearTempField" hidden></div>
+        <div class="field" id="nearManualField" hidden>
+          <label><span class="flabel">Age, Ga</span></label>
+          <input type="number" id="nearManual" min="3.6" max="4.6" step="0.01" value="4.40">
+        </div>
+      </div>
+
+      <div class="card">
+        <h2>Set the far end</h2>
+        <p class="sub">Which evidence for LUCA you are prepared to accept</p>
+        <div class="field">
+          <div class="seg" id="farModeSeg">
+            <button data-v="event" aria-pressed="true">Published estimate</button>
+            <button data-v="manual" aria-pressed="false">By hand</button>
+          </div>
+        </div>
+        <div class="field" id="farEventField">
+          <label><span class="flabel">Evidence</span></label>
+          <select id="farEvent"></select>
+          <div class="hint" id="farEventHint"></div>
+        </div>
+        <div class="field" id="farManualField" hidden>
+          <label><span class="flabel">Age, Ga</span></label>
+          <input type="number" id="farManual" min="3.4" max="4.6" step="0.01" value="4.20">
+        </div>
+      </div>
+
+      <div class="card">
+        <h2>Temperature for the chemistry</h2>
+        <p class="sub">This is a separate choice from the envelope</p>
+        <div class="field">
+          <div class="seg" id="tempModeSeg">
+            <button data-v="manual" aria-pressed="true">Set it myself</button>
+            <button data-v="curve" aria-pressed="false">Read the cooling curve</button>
+          </div>
+          <div class="hint">Reading the curve ties the chemistry temperature to the near end you chose, so a cooler start also slows every handoff.</div>
+        </div>
+        <div id="chemTempField"></div>
+      </div>
+    </div>
+
+    <div>
+      <div class="card">
+        <h2>What the envelope means</h2>
+        <p class="lede">The <strong>near end</strong> is planetary. It is the moment when the surface stopped being hostile to any chemistry at all, and nothing about biology sets it. The <strong>far end</strong> is biological. It is the latest moment by which LUCA must already have existed, and it depends entirely on which evidence you accept. The difference between the two is the whole budget the chemistry has to work in.</p>
+        <div class="kpis" id="envKpis" style="margin-top:14px"></div>
+        <div id="envWarn"></div>
+      </div>
+
+      <div class="fig" style="margin-top:18px">
+        <div class="fig-head">
+          <div><h2>Figure E1. The envelope</h2><p class="sub">Your two ends, drawn against the published evidence</p></div>
+          <div class="fig-tools" data-fig="envelope">
+            <button class="btn sm" data-dl="svg">SVG</button>
+            <button class="btn sm" data-dl="png">PNG</button>
+          </div>
+        </div>
+        <div class="fig-body" id="figEnvelope"></div>
+        <p class="fig-cap" id="capEnvelope"></p>
+      </div>
+
+      <div class="fig" style="margin-top:18px">
+        <div class="fig-head">
+          <div><h2>Figure E2. Cooling curve</h2><p class="sub">Tier C. Editable anchors, illustrative only</p></div>
+          <div class="fig-tools" data-fig="cooling">
+            <button class="btn sm" data-dl="svg">SVG</button>
+            <button class="btn sm" data-dl="png">PNG</button>
+          </div>
+        </div>
+        <div class="fig-body" id="figCooling"></div>
+        <p class="fig-cap">This curve is not a result. It is a way of turning a temperature preference into a start age so that the choice is explicit rather than hidden. Edit the anchor points on the Parameters page and watch the near end move.</p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ============ 2. AUDIT ============ -->
+<section class="view" id="v-audit">
+  <div class="card">
+    <h2>How a required duration is built</h2>
+    <p class="sub">Five terms, and only two of them are computed from measured chemistry</p>
+    <div class="tbl-wrap"><table class="data" id="tblTerms"></table></div>
+    <p class="note" style="margin-top:14px">T1 is a scenario judgement you can scale. T2 and T3 are computed here from the handoff table, the temperature and the cycle, so changing the chemistry changes the duration. T4 is computed from population genetics and is the same for every scenario by design, which is why it sets the floor of the whole figure.</p>
+  </div>
+
+  <div class="fig" style="margin-top:18px">
+    <div class="fig-head">
+      <div><h2>Figure A1. Time-budget audit</h2><p class="sub">Required duration per scenario against the budget you set</p></div>
+      <div class="fig-tools" data-fig="audit">
+        <button class="btn sm" data-dl="svg">SVG</button>
+        <button class="btn sm" data-dl="png">PNG</button>
+        <button class="btn sm" id="dlAuditCsv">CSV</button>
+      </div>
+    </div>
+    <div class="fig-body" id="figAudit"></div>
+    <p class="fig-cap">The grey bar marked "ms" under each scenario is the range printed in the manuscript, so you can see at a glance where the live model agrees with the published judgement and where your parameter choices have moved it.</p>
+  </div>
+
+  <div class="grid g-side-r" style="margin-top:18px">
+    <div class="card">
+      <h2>Scenario results</h2>
+      <p class="sub">Click a row to see the full chain of numbers behind it</p>
+      <div class="tbl-wrap"><table class="data" id="tblAudit"></table></div>
+    </div>
+    <div class="card">
+      <h2>Behind the number</h2>
+      <p class="sub">Every step from chemistry to duration</p>
+      <div id="auditDetail"><p class="empty">Select a scenario.</p></div>
+    </div>
+  </div>
+
+  <div class="card" style="margin-top:18px">
+    <h2>Which passages could have been very quick</h2>
+    <p class="sub">Sorted by the transfer time the model is currently using</p>
+    <div class="tbl-wrap"><table class="data" id="tblFast"></table></div>
+  </div>
+</section>
+
+<!-- ============ 3. HANDOFFS ============ -->
+<section class="view" id="v-handoffs">
+  <div class="card">
+    <h2>Chemistry becomes a probability</h2>
+    <p class="lede">Each rung has a transfer time and a loss time. Their ratio is the Damkohler number, <strong>Da = tau loss divided by tau transfer</strong>. The probability that a species is handed on rather than destroyed is <strong>p = Da divided by (1 + Da)</strong>. That is not an extra assumption on top of the handoff criterion. It is the handoff criterion written as a number between zero and one, so that it can be multiplied across rungs and turned into a waiting time.</p>
+  </div>
+  <div class="grid g-side-r" style="margin-top:18px">
+    <div>
+      <div class="fig">
+        <div class="fig-head">
+          <div><h2>Figure H1. The diagonal</h2><p class="sub">At the working temperature, not at 25 C</p></div>
+          <div class="fig-tools" data-fig="damkohler">
+            <button class="btn sm" data-dl="svg">SVG</button>
+            <button class="btn sm" data-dl="png">PNG</button>
+          </div>
+        </div>
+        <div class="fig-body" id="figDamkohler"></div>
+        <p class="fig-cap">Bars are the reported low to high range, corrected for temperature. Because transfer and loss have different activation energies, cooling moves the two coordinates by different amounts, so points migrate across the diagonal rather than sliding along it.</p>
+      </div>
+    </div>
+    <div class="card">
+      <h2>Temperature</h2>
+      <div id="handoffTempField"></div>
+      <h3>Activation energies</h3>
+      <div id="handoffEaFields"></div>
+      <div class="note" style="margin-top:12px" id="eaDerivation"></div>
+    </div>
+  </div>
+  <div class="card" style="margin-top:18px">
+    <h2>Every handoff at the current temperature</h2>
+    <p class="sub">Click a row to highlight it on the figure and read its sources</p>
+    <div class="tbl-wrap"><table class="data" id="tblHandoffs"></table></div>
+    <div id="handoffDetail" style="margin-top:14px"></div>
+  </div>
+</section>
+
+<!-- ============ 4. MINERAL SURFACES ============ -->
+<section class="view" id="v-surfaces">
+  <div class="card">
+    <h2>A surface holds, protects and lets go</h2>
+    <p class="lede">Between S2 and S4 most molecules are not floating free. They sit on a mineral. In the model a surface does three things. It <strong>holds</strong> a molecule, which is binding affinity. It <strong>protects</strong> it while it is held, which is stability, so the loss time grows. And it <strong>lets it go</strong> again, or does not, which decides whether the molecule can still meet a partner and react. Holding helps S2 and S3. For S4 there is a best middle: a surface that holds too tightly, or is already full, gathers molecules but stops them from reacting.</p>
+    <p class="note" style="margin-top:10px">Phosphate is the model molecule. Nucleotides and DNA bind minerals mainly through their phosphate groups, so phosphate is a fair stand-in for anything with a phosphate backbone or a negative charge. The mechanisms follow the work of Karina K. Sand and co-workers at GLOBE: positive surfaces such as iron oxides, carbonates, clay edges and brucite-like layers bind directly, negative surfaces bind only through Mg2+ or Ca2+ bridges, steps and edges bind more tightly than flat faces, and very strong binding can damage what it holds.</p>
+  </div>
+
+  <div class="grid g-side-r" style="margin-top:18px">
+    <div>
+      <div class="fig">
+        <div class="fig-head">
+          <div><h2>Figure M1. How strongly each surface holds phosphate, and how that changes with pH</h2><p class="sub" id="surfPhSub">Distribution coefficient for each surface</p></div>
+          <div class="fig-tools" data-fig="surfaceph">
+            <button class="btn sm" data-dl="svg">SVG</button>
+            <button class="btn sm" data-dl="png">PNG</button>
+          </div>
+        </div>
+        <div class="fig-body" id="figSurfacePh"></div>
+        <p class="fig-cap">Kd is how many litres of water one gram of mineral can strip of phosphate. Multiply it by the grams of mineral per litre: above 1, most of the phosphate sits on the surface. Oxides, green rust and clay edges lose their positive charge as pH rises, so they hold less. Quartz, glass and mica faces are negative throughout and hold phosphate only through Mg2+ and Ca2+ bridges, so their curves are low and flat. Brucite stays positive to about pH 11.</p>
+      </div>
+      <div class="fig" style="margin-top:18px">
+        <div class="fig-head">
+          <div><h2>Figure M2. Holding helps, until it hinders</h2><p class="sub">What a surface does to S2 and S4 as binding gets stronger</p></div>
+          <div class="fig-tools" data-fig="surfacegain">
+            <button class="btn sm" data-dl="svg">SVG</button>
+            <button class="btn sm" data-dl="png">PNG</button>
+          </div>
+        </div>
+        <div class="fig-body" id="figSurfaceGain"></div>
+        <p class="fig-cap">Lines are one generic surface whose affinity is swept from weak to strong, using the site density and locked fraction of the highlighted mineral. Points are the real minerals at your conditions (circles S2, diamonds S4). They sit off the lines because each mineral has its own site density, surface area and locked fraction. Protection (S2) rises as more is held, then falls once binding is strong enough to strain the molecule. The gain in activation speed (S4) falls when the surface fills up or holds its molecules too tightly to let them react.</p>
+      </div>
+    </div>
+    <div class="card">
+      <h2>Surface settings</h2>
+      <div class="field">
+        <label><span class="flabel">Which surface</span></label>
+        <div class="seg" id="surfModeSeg">
+          <button data-v="scenario" aria-pressed="true">Per scenario</button>
+          <button data-v="one" aria-pressed="false">One for all</button>
+          <button data-v="mix" aria-pressed="false">Mineral mix</button>
+          <button data-v="off" aria-pressed="false">Off</button>
+        </div>
+        <div class="hint" id="surfModeHint"></div>
+      </div>
+      <div class="field" id="surfMineralField">
+        <label><span class="flabel">Mineral used for every scenario</span></label>
+        <select id="surfMineral"></select>
+      </div>
+      <div id="surfOneFields"></div>
+      <div class="field">
+        <label><span class="flabel">Rungs the surface acts on</span></label>
+        <div id="surfRungs" style="display:flex;gap:16px;flex-wrap:wrap"></div>
+      </div>
+      <h3>Solution</h3>
+      <div id="surfSolutionFields"></div>
+      <h3>Stability and bridging</h3>
+      <div id="surfStabilityFields"></div>
+      <h3>Try it on hard chemistry</h3>
+      <p class="hint" style="margin:0 0 8px">At the default chemistry every rung already passes, so a surface has little to rescue. Load the three failing handoffs from the memo (H4 at S2, H7 at S3, H8 at S4) with a billion required successes to see what surfaces do.</p>
+      <div style="display:flex;gap:8px;flex-wrap:wrap">
+        <button class="btn sm" id="surfHard">Load the hard case</button>
+        <button class="btn sm" id="surfDefaultChem">Back to default chemistry</button>
+      </div>
+    </div>
+  </div>
+
+  <div class="card" style="margin-top:18px">
+    <h2>What each scenario gains from its surface</h2>
+    <p class="sub">Edit the mineral, pH and amount of solid for each scenario. Durations are compared with the same run with surfaces switched off</p>
+    <div class="tbl-wrap"><table class="data" id="tblSurfScen"></table></div>
+    <div class="note" style="margin-top:12px" id="surfScenNote"></div>
+  </div>
+
+  <div class="grid g-side-r" style="margin-top:18px">
+    <div class="card">
+      <h2>Minerals and their phosphate numbers</h2>
+      <p class="sub">At 25 C. Click a row for the reasoning and sources</p>
+      <div class="tbl-wrap"><table class="data" id="tblMinerals"></table></div>
+    </div>
+    <div class="card">
+      <h2>Mineral detail</h2>
+      <div id="mineralDetail"><p class="empty">Select a mineral.</p></div>
+    </div>
+  </div>
+
+  <div class="card" style="margin-top:18px">
+    <h2>How the surface numbers are calculated</h2>
+    <p class="sub">Every step, in the order the model takes it</p>
+    <div id="surfMethod"></div>
+  </div>
+</section>
+
+<section class="view" id="v-zoom">
+  <div class="card">
+    <h2>T2 and T3 up close</h2>
+    <p class="lede">T1 and T4 are measured in millions of years, so on most figures T2 and T3 shrink to nothing. That hides where the filtering happens. T2 is the chemistry: on every rung a molecule has to be passed on before it falls apart, and the time that takes is minutes to hours. T3 is the waiting for luck: if only some tries get through every rung, the world has to keep trying, cycle after cycle, at every site at once. This tab puts both on their own clock, in seconds, hours and years, so you can see how a change in a chance of passing turns into time.</p>
+    <div class="seg" id="zoomScenSeg" style="margin-top:14px;flex-wrap:wrap"></div>
+    <div class="kpis" id="zoomKpis" style="margin-top:14px"></div>
+    <p class="note" id="zoomAnalogy" style="margin-top:12px"></p>
+    <div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:12px">
+      <button class="btn sm" id="zoomHard">Load the hard case</button>
+      <button class="btn sm" id="zoomDefault">Back to default chemistry</button>
+    </div>
+  </div>
+
+  <div class="fig" style="margin-top:18px">
+    <div class="fig-head">
+      <div><h2>Figure Z1. One ruler for all five terms</h2><p class="sub">Every scenario, every term, in seconds on a powers-of-ten scale</p></div>
+      <div class="fig-tools" data-fig="zoomruler">
+        <button class="btn sm" data-dl="svg">SVG</button>
+        <button class="btn sm" data-dl="png">PNG</button>
+      </div>
+    </div>
+    <div class="fig-body" id="figZoomRuler"></div>
+    <p class="fig-cap">On a scale where each step is ten times longer, minutes and millions of years fit on one line. With the default chemistry T2 and T3 sit between seconds and hours, ten to fifteen powers of ten below T1 and T4. Load the hard case and watch T3 jump to the right: the chemistry did not get slower, the chance of success got smaller.</p>
+  </div>
+
+  <div class="grid g-2" style="margin-top:18px">
+    <div class="fig">
+      <div class="fig-head">
+        <div><h2>Figure Z2. Inside T2, the race on each rung</h2><p class="sub" id="zoomRaceSub">Transfer time against loss time</p></div>
+        <div class="fig-tools" data-fig="zoomrace">
+          <button class="btn sm" data-dl="svg">SVG</button>
+          <button class="btn sm" data-dl="png">PNG</button>
+        </div>
+      </div>
+      <div class="fig-body" id="figZoomRace"></div>
+      <p class="fig-cap">The chance of passing a rung is p = Da / (1 + Da), where Da is the loss time divided by the transfer time. A rung where the rust bar is a hundred times longer than the teal bar passes 99 times in 100. The strip at the bottom shows the transfer times end to end in ordinary clock time, which is T2.</p>
+    </div>
+    <div class="fig">
+      <div class="fig-head">
+        <div><h2>Figure Z3. The filter</h2><p class="sub">How many tries are left after each rung</p></div>
+        <div class="fig-tools" data-fig="zoomfunnel">
+          <button class="btn sm" data-dl="svg">SVG</button>
+          <button class="btn sm" data-dl="png">PNG</button>
+        </div>
+      </div>
+      <div class="fig-body" id="figZoomFunnel"></div>
+      <p class="fig-cap">The chances multiply. Five rungs that each pass 9 times in 10 let through 6 tries in 10. Five rungs that each pass 1 time in 100 let through one try in ten billion. What is left at the end is the joint p that sets T3.</p>
+    </div>
+  </div>
+
+  <div class="fig" style="margin-top:18px">
+    <div class="fig-head">
+      <div><h2>Figure Z4. How T3 grows as the chance shrinks</h2><p class="sub">One line per scenario. More sites move a line down, longer cycles move it up</p></div>
+      <div class="fig-tools" data-fig="zoomt3">
+        <button class="btn sm" data-dl="svg">SVG</button>
+        <button class="btn sm" data-dl="png">PNG</button>
+      </div>
+    </div>
+    <div class="fig-body" id="figZoomT3"></div>
+    <p class="fig-cap">Each line is a straight slope: ten times smaller p means ten times longer T3. The lines differ only in how many sites try at once and how long one cycle lasts. The dotted drop line marks the joint p at which T3 alone would use up the whole budget for the highlighted scenario. Anything to the right of it leaves time to spare.</p>
+  </div>
+
+  <div class="grid g-side-r" style="margin-top:18px">
+    <div class="card">
+      <h2>How far could the chance fall</h2>
+      <p class="sub">The joint p at which T3 reaches a day, a year, a million years and the budget</p>
+      <div class="tbl-wrap"><table class="data" id="tblZoomBreak"></table></div>
+      <p class="note" style="margin-top:10px">The column "room" is how many powers of ten the joint p could still fall before T3 alone fills the budget. Large room means the outcome does not hang on the probability estimates. Small or negative room means it does.</p>
+    </div>
+    <div class="card">
+      <h2>T3, step by step</h2>
+      <p class="sub" id="zoomStepSub">For the selected scenario</p>
+      <div id="zoomSteps"></div>
+    </div>
+  </div>
+</section>
+
+
+<!-- ============ 4. LADDER ============ -->
+<section class="view" id="v-ladder">
+  <div class="fig">
+    <div class="fig-head">
+      <div><h2>Figure L1. The ladder, S0 to S6</h2><p class="sub">With the probability the model currently assigns to each rung</p></div>
+      <div class="fig-tools" data-fig="ladder">
+        <button class="btn sm" data-dl="svg">SVG</button>
+        <button class="btn sm" data-dl="png">PNG</button>
+      </div>
+    </div>
+    <div class="fig-body" id="figLadder"></div>
+    <p class="fig-cap">S0 to S3 are filters: they change what is present without any copying, inheritance or competition between variants. S4 and S5 are selection proper. S6 is new in this model and is drawn with a dashed border because it happens after LUCA and does not consume the budget.</p>
+  </div>
+
+  <div class="card" style="margin-top:18px">
+    <h2>Choose which handoff stands in for each rung</h2>
+    <p class="sub">The default assignment is a judgement, so it is exposed rather than buried</p>
+    <div id="rungAssign"></div>
+  </div>
+
+  <div class="fig" style="margin-top:18px">
+    <div class="fig-head">
+      <div><h2>Figure L2. Elemental passage matrix</h2><p class="sub">Including the new preservation column</p></div>
+      <div class="fig-tools" data-fig="matrix">
+        <button class="btn sm" data-dl="svg">SVG</button>
+        <button class="btn sm" data-dl="png">PNG</button>
+      </div>
+    </div>
+    <div class="fig-body" id="figMatrix"></div>
+  </div>
+
+  <div class="grid g-side-r" style="margin-top:18px">
+    <div class="card">
+      <h2>Elements of interest</h2>
+      <p class="sub">Click an element for its hardest rung, its preservation grade and its sources</p>
+      <div class="tbl-wrap"><table class="data" id="tblElements"></table></div>
+    </div>
+    <div class="card">
+      <h2>Element detail</h2>
+      <div id="elementDetail"><p class="empty">Select an element.</p></div>
+    </div>
+  </div>
+
+  <div class="card" style="margin-top:18px">
+    <h2>Elements do not run the ladder on separate tracks</h2>
+    <p class="sub">Couplings between elements, which is why one element can block another</p>
+    <div class="tbl-wrap"><table class="data" id="tblCouplings"></table></div>
+  </div>
+
+  <div class="card" style="margin-top:18px">
+    <h2>Named molecules, from source rock to conserved biochemistry</h2>
+    <p class="sub">The same ladder read as concrete species rather than element letters</p>
+    <div id="chains"></div>
+  </div>
+</section>
+
+<!-- ============ 5. PRESERVATION ============ -->
+<section class="view" id="v-preservation">
+  <div class="card">
+    <h2 id="s6Title">S6, the preservation rung</h2>
+    <p class="sub">New in this model. It filters the evidence, not the life.</p>
+    <p class="lede" id="s6Lede"></p>
+  </div>
+
+  <div class="grid g-2" style="margin-top:18px">
+    <div class="card">
+      <h2>S6a. Ecosystem persistence</h2>
+      <p class="sub">LUCA was not alone, so a single lineage is not enough</p>
+      <p class="lede" id="s6aReading" style="font-size:14px"></p>
+      <div id="s6aFields" style="margin-top:14px"></div>
+      <div class="kpis" id="s6aKpis" style="margin-top:14px"></div>
+    </div>
+    <div class="card">
+      <h2>S6b. Rock-record preservation</h2>
+      <p class="sub">Survive burial, or leave nothing to measure</p>
+      <p class="lede" id="s6bReading" style="font-size:14px"></p>
+      <div id="s6bFields" style="margin-top:14px"></div>
+      <div class="kpis" id="s6bKpis" style="margin-top:14px"></div>
+    </div>
+  </div>
+
+  <div class="fig" style="margin-top:18px">
+    <div class="fig-head">
+      <div><h2>Figure P1. Survival against burial temperature</h2><p class="sub">Only classes above the dashed line can be read out of a rock that age</p></div>
+      <div class="fig-tools" data-fig="preservation">
+        <button class="btn sm" data-dl="svg">SVG</button>
+        <button class="btn sm" data-dl="png">PNG</button>
+      </div>
+    </div>
+    <div class="fig-body" id="figPreservation"></div>
+    <p class="fig-cap">Curves are Arrhenius extrapolations from a measured half-life, which is why the activation energy for degradation matters so much. Raise it and every curve swings upward at low temperature, which is the single easiest way to fool yourself about deep-time survival. The classes with no measured half-life are listed separately rather than guessed at.</p>
+  </div>
+
+  <div class="card" style="margin-top:18px">
+    <h2>Molecule classes at the current burial temperature</h2>
+    <p class="sub">Click a row for the chemistry of why it survives or does not</p>
+    <div class="tbl-wrap"><table class="data" id="tblPreservation"></table></div>
+    <div id="presDetail" style="margin-top:14px"></div>
+  </div>
+
+  <div class="card" style="margin-top:18px">
+    <h2>Why biomolecules are refractory, and why earlier molecules were not</h2>
+    <p class="sub">The chemical reason the record is biased, stated in six steps</p>
+    <div id="whyRefractory"></div>
+  </div>
+</section>
+
+<!-- ============ 6. REGIMES ============ -->
+<section class="view" id="v-regimes">
+  <div class="fig">
+    <div class="fig-head">
+      <div><h2>Figure R1. Four rate-gated regimes</h2><p class="sub">Duration arrows drawn proportional to the logarithm of each regime duration</p></div>
+      <div class="fig-tools" data-fig="regimes">
+        <button class="btn sm" data-dl="svg">SVG</button>
+        <button class="btn sm" data-dl="png">PNG</button>
+      </div>
+    </div>
+    <div class="fig-body" id="figRegimes"></div>
+  </div>
+
+  <div class="card" style="margin-top:18px">
+    <h2>The regimes, in relation to the rungs and to the audit</h2>
+    <div class="tbl-wrap"><table class="data" id="tblRegimes"></table></div>
+  </div>
+
+  <div class="card" style="margin-top:18px">
+    <h2>Vocabulary</h2>
+    <p class="sub">What the unit of selection is at each level, and which rungs it can occupy</p>
+    <div class="tbl-wrap"><table class="data" id="tblVocab"></table></div>
+  </div>
+
+  <div class="card" style="margin-top:18px">
+    <h2>The rungs themselves</h2>
+    <p class="sub">Where the material comes from, how it gets there, and what removes it on the way</p>
+    <div class="tbl-wrap"><table class="data" id="tblRungs"></table></div>
+  </div>
+
+  <div class="grid g-2" style="margin-top:18px">
+    <div class="card">
+      <h2>Cycles that drive the attempts</h2>
+      <p class="sub">The period of the chosen cycle is the denominator of the attempt rate in T3</p>
+      <div class="tbl-wrap"><table class="data" id="tblCycles"></table></div>
+    </div>
+    <div class="card">
+      <h2>Free energy currencies</h2>
+      <p class="sub">What actually pays for each transfer</p>
+      <div class="tbl-wrap"><table class="data" id="tblEnergy"></table></div>
+    </div>
+  </div>
+
+  <div class="card" style="margin-top:18px">
+    <h2>Speed classes and tiers</h2>
+    <div class="grid g-2">
+      <div><h3>Speed classes</h3><div id="speedClasses"></div></div>
+      <div><h3>Confidence tiers</h3><div id="tierDefs"></div></div>
+    </div>
+  </div>
+</section>
+
+<!-- ============ 7. PARAMETERS ============ -->
+<section class="view" id="v-params">
+  <div class="card">
+    <h2>Every parameter in the model</h2>
+    <p class="sub">Value, plausible range, confidence tier and where the number comes from</p>
+    <div class="field" style="max-width:520px">
+      <label><span class="flabel">Range limits</span></label>
+      <div class="seg" id="rangeSeg">
+        <button data-v="plausible" aria-pressed="true">Keep me inside plausible values</button>
+        <button data-v="wide" aria-pressed="false">Let me use unreasonable values</button>
+      </div>
+      <div class="hint">Unreasonable values are allowed on purpose, because seeing what it takes to break a conclusion is more informative than seeing it hold. Anything outside the plausible range is flagged in red.</div>
+    </div>
+    <div id="paramPanels" style="margin-top:18px"></div>
+    <div class="btn-row" style="margin-top:18px">
+      <button class="btn" id="resetParams">Reset every parameter to its default</button>
+    </div>
+  </div>
+
+  <div class="card" style="margin-top:18px">
+    <h2>Cooling curve anchors</h2>
+    <p class="sub">Tier C. Edit these and the temperature route to the near end moves with them.</p>
+    <div class="tbl-wrap"><table class="data" id="tblAnchors"></table></div>
+  </div>
+
+  <div class="card" style="margin-top:18px">
+    <h2>Measurement gaps</h2>
+    <p class="sub">What is not known, and what would settle it</p>
+    <div class="tbl-wrap"><table class="data" id="tblGaps"></table></div>
+  </div>
+
+  <div class="card" style="margin-top:18px">
+    <h2>Predictions the model can be broken by</h2>
+    <div class="tbl-wrap"><table class="data" id="tblPredictions"></table></div>
+  </div>
+
+  <div class="card" style="margin-top:18px">
+    <h2>References</h2>
+    <p class="sub"><span id="refCount"></span> sources. Filter by figure, tier or text.</p>
+    <div class="grid g-2" style="margin-bottom:12px">
+      <div class="field"><label><span class="flabel">Search</span></label><input type="text" id="refSearch" placeholder="author, topic or URL"></div>
+      <div class="field"><label><span class="flabel">Used in</span></label><select id="refFilter"></select></div>
+    </div>
+    <div class="tbl-wrap"><table class="data" id="tblRefs"></table></div>
+  </div>
+</section>
+
+<!-- ============ 8. EXPORT ============ -->
+<section class="view" id="v-export">
+  <div class="grid g-2">
+    <div class="card">
+      <h2>Export this run</h2>
+      <p class="sub">Everything on screen, in a form you can keep or reopen</p>
+      <h3>Figures</h3>
+      <div class="btn-row" id="exportFigs"></div>
+      <div class="hint" style="margin-top:6px">SVG is vector and editable in Illustrator or Inkscape, so it is the format to use for the manuscript. PNG is rendered at twice the on-screen size.</div>
+      <h3>Data</h3>
+      <div class="btn-row">
+        <button class="btn" id="expAuditCsv">Audit table, CSV</button>
+        <button class="btn" id="expHandoffCsv">Handoffs at this temperature, CSV</button>
+        <button class="btn" id="expMatrixCsv">Element matrix, CSV</button>
+        <button class="btn" id="expPresCsv">Preservation table, CSV</button>
+        <button class="btn" id="expSurfCsv">Mineral surfaces, CSV</button>
+        <button class="btn" id="expZoomCsv">T2 and T3 in seconds, CSV</button>
+      </div>
+      <h3>Reproducibility</h3>
+      <div class="btn-row">
+        <button class="btn primary" id="expState">Parameter state, JSON</button>
+        <button class="btn" id="expModel">Full model data, JSON</button>
+        <button class="btn" id="expReport">Written summary of this run, Markdown</button>
+      </div>
+      <div class="hint" style="margin-top:6px">The parameter state file is small and reopens this exact run. The full model file is the complete dataset, which is what you edit to add new material.</div>
+    </div>
+
+    <div class="card">
+      <h2>Add new material</h2>
+      <p class="sub">Elements, handoffs and references, as new papers come in</p>
+      <p class="lede" style="font-size:14px">The model reads one JSON file, so extending it does not mean editing the app. Export the full model data, add your entries to the array you want to grow, then load the file back in here. Nothing is overwritten unless an entry has an id that already exists.</p>
+      <div class="field" style="margin-top:14px">
+        <label><span class="flabel">Load a model or state file</span></label>
+        <input type="file" id="importFile" accept=".json,application/json">
+        <div class="hint">A file with a <code>parameters</code> key is read as a saved run. A file with <code>elements</code>, <code>handoffs</code> or <code>references</code> is merged into the dataset.</div>
+      </div>
+      <div id="importReport"></div>
+      <h3>The shape to follow</h3>
+      <div class="tbl-wrap"><table class="data" id="tblSchema"></table></div>
+    </div>
+  </div>
+
+  <div class="card" style="margin-top:18px">
+    <h2>How every number here is produced</h2>
+    <div id="methodText"></div>
+  </div>
+</section>
+
+<p class="foot" id="footNote"></p>
+</main>
+
+<div class="toast" id="toast" role="status" aria-live="polite"></div>
+<script type="module" src="js/main.js"></script>
+<script data-pplx-inline-edit>
+(function () {
+  if (window === window.top) return;
+
+  const allowedParentOrigins = ["https://www.perplexity.ai","https://perplexity.ai","https://testing.perplexity.ai","https://staging.perplexity.ai","https://*.preview.i.perplexity.ai","http://perplexity.localhost","http://localhost:1420","http://127.0.0.1:1420","http://localhost:3000","http://127.0.0.1:3000","http://localhost:5173","http://127.0.0.1:5173"];
+  const MAX_FONT_BYTES = 500 * 1024;
+  const MAX_TOTAL_FONT_BYTES = 2 * 1024 * 1024;
+  const DEFAULT_LINE_HEIGHT = 16;
+  let scrollForwarding = false;
+  let scrollRaf = 0;
+  let trustedTopOrigin = null;
+
+  // Allow entries like "https://*.preview.i.perplexity.ai" — the wildcard
+  // matches a single DNS label (no dots), so "https://*.foo" cannot stretch
+  // across multiple labels.
+  function matchesAllowedOrigin(origin) {
+    if (!origin) return false;
+    for (const entry of allowedParentOrigins) {
+      if (!entry.includes("*")) {
+        if (entry === origin) return true;
+        continue;
+      }
+      const pattern = new RegExp(
+        "^" +
+          entry.replace(/[.+?^${}()|[\]\\]/g, "\\$&").replace(/\*/g, "[^.]+") +
+          "$",
+      );
+      if (pattern.test(origin)) return true;
+    }
+    return false;
+  }
+
+  // Trust decision: when the sender is same-origin-visible (event.origin is a
+  // real origin like https://www.perplexity.ai) we trust event.origin directly.
+  // When event.origin is "null" (opaque broker srcdoc), we fall back to the
+  // broker's stamped `parentOrigin` to identify the top window. The fallback
+  // is claim-only — we rely on the browser's native `targetOrigin` enforcement
+  // on the response path (see postToTrustedTop) to ensure replies can't be
+  // delivered to anyone but the actual top window of that claimed origin.
+  function getTrustedParentOrigin(event) {
+    const forwardedParentOrigin =
+      typeof event.data.parentOrigin === "string" ? event.data.parentOrigin : null;
+    const parentOrigin = event.origin === "null" ? forwardedParentOrigin : event.origin;
+    return matchesAllowedOrigin(parentOrigin) ? parentOrigin : null;
+  }
+
+  // All responses go to window.top with targetOrigin = the allowlisted origin.
+  // An attacker that iframes us inside their own null-origin broker can claim
+  // any parentOrigin they like, but the browser will drop the reply whenever
+  // the real top's origin doesn't match — so the screenshot never leaves.
+  function postToTrustedTop(message) {
+    if (!trustedTopOrigin) return;
+    try {
+      window.top.postMessage(message, trustedTopOrigin);
+    } catch (_error) {}
+  }
+
+  const PICK_CAPABILITIES = ["pick"];
+  const PICK_CHAIN_LENGTH = 4;
+  const PICK_MAX_TEXT_CHARS = 120;
+  const PICK_MAX_HTML_CHARS = 300;
+
+  function truncate(value, maxChars) {
+    return value.length > maxChars ? value.slice(0, maxChars - 1) + "…" : value;
+  }
+
+  function isPickableElement(element) {
+    return (
+      element instanceof Element &&
+      element !== document.documentElement &&
+      element !== document.body
+    );
+  }
+
+  function resolvePickTarget(x, y) {
+    if (!Number.isFinite(x) || !Number.isFinite(y)) return null;
+    const element = document.elementFromPoint(x, y);
+    return isPickableElement(element) ? element.closest("svg") || element : null;
+  }
+
+  function pickLabel(element) {
+    if (element.id) return element.localName + "#" + element.id;
+    return [element.localName].concat(Array.from(element.classList).slice(0, 2)).join(".");
+  }
+
+  // Only attributes that help find the element in source. data-* values and URL
+  // query strings or fragments can carry tokens.
+  const PICK_ATTRIBUTES = new Set([
+    "id",
+    "class",
+    "name",
+    "type",
+    "role",
+    "alt",
+    "aria-label",
+    "href",
+    "src",
+  ]);
+
+  function pickAttributeValue(attribute) {
+    return attribute.name === "href" || attribute.name === "src"
+      ? attribute.value.split(/[?#]/)[0]
+      : attribute.value;
+  }
+
+  function describePickElement(element) {
+    const chain = [];
+    for (
+      let current = element;
+      isPickableElement(current) && chain.length < PICK_CHAIN_LENGTH;
+      current = current.parentElement
+    ) {
+      chain.unshift(current);
+    }
+    const attributes = Array.from(element.attributes)
+      .filter((attribute) => PICK_ATTRIBUTES.has(attribute.name))
+      .map((attribute) => ` ${attribute.name}="${pickAttributeValue(attribute).replace(/"/g, "&quot;")}"`)
+      .join("");
+    const text = (element.innerText || element.textContent || "").replace(/\s+/g, " ").trim();
+    return {
+      chain: chain.map(pickLabel),
+      html: truncate(`<${element.localName}${attributes}>`, PICK_MAX_HTML_CHARS),
+      text: text ? truncate(text, PICK_MAX_TEXT_CHARS) : undefined,
+    };
+  }
+
+  // Hover asks once per frame, and innerText on a large section forces layout,
+  // so only the rect is re-read while the pointer stays on the same element.
+  // Clicks ask for fresh details since the page may have changed the element.
+  let lastPick = null;
+
+  function describePickTarget(element, fresh) {
+    if (fresh || lastPick?.element !== element) {
+      lastPick = { element, details: describePickElement(element) };
+    }
+    const rect = element.getBoundingClientRect();
+    return {
+      rect: { x: rect.left, y: rect.top, width: rect.width, height: rect.height },
+      ...lastPick.details,
+    };
+  }
+
+  function inlineAll(original, clone) {
+    if (original.nodeType !== 1 || clone.nodeType !== 1) return;
+
+    try {
+      const computedStyle = getComputedStyle(original);
+      // cssText on a computed style is the serialized declaration in modern
+      // Chromium/Safari — a single read beats enumerating ~400 longhand
+      // properties. Firefox returns "" here, so we fall back on empty.
+      const serialized = computedStyle.cssText;
+      if (serialized) {
+        clone.style.cssText = serialized;
+      } else {
+        const parts = new Array(computedStyle.length);
+        for (let index = 0; index < computedStyle.length; index += 1) {
+          const property = computedStyle[index];
+          parts[index] = `${property}:${computedStyle.getPropertyValue(property)};`;
+        }
+        clone.style.cssText = parts.join("");
+      }
+    } catch (_error) {}
+
+    const originalChildren = original.children;
+    const clonedChildren = clone.children;
+    for (
+      let index = 0;
+      index < originalChildren.length && index < clonedChildren.length;
+      index += 1
+    ) {
+      inlineAll(originalChildren[index], clonedChildren[index]);
+    }
+  }
+
+  function extractFontUrl(srcValue) {
+    const matches = [
+      ...srcValue.matchAll(
+        /url\(["']?([^"')]+)["']?\)(?:\s*format\(["']?([^"')]+)["']?\))?/gi,
+      ),
+    ];
+    if (matches.length === 0) return null;
+    const woff2 = matches.find((m) => m[2] && m[2].toLowerCase().includes("woff2"));
+    if (woff2) return woff2[1];
+    const woff = matches.find((m) => m[2] && m[2].toLowerCase().includes("woff"));
+    if (woff) return woff[1];
+    return matches[0][1];
+  }
+
+  // Cache resolved font URL -> data URI across captures. Fonts on a page
+  // essentially never change, and a batch run emits multiple captures back to
+  // back — without this we'd refetch + re-base64 every time.
+  const fontDataUriCache = new Map();
+  const SRC_DECLARATION_RE = /src\s*:\s*[^;}]+/i;
+
+  async function fetchAsDataUri(url) {
+    if (fontDataUriCache.has(url)) return fontDataUriCache.get(url);
+    let dataUri = null;
+    try {
+      const response = await fetch(url, { mode: "cors", credentials: "omit" });
+      if (response.ok) {
+        const blob = await response.blob();
+        if (blob.size <= MAX_FONT_BYTES) {
+          dataUri = await new Promise((resolve) => {
+            const reader = new FileReader();
+            reader.onloadend = () =>
+              resolve(typeof reader.result === "string" ? reader.result : null);
+            reader.onerror = () => resolve(null);
+            reader.readAsDataURL(blob);
+          });
+        }
+      }
+    } catch (_error) {
+      dataUri = null;
+    }
+    fontDataUriCache.set(url, dataUri);
+    return dataUri;
+  }
+
+  function collectFontFaceRuleTexts() {
+    const rules = [];
+    for (const sheet of document.styleSheets) {
+      let cssRules;
+      try {
+        cssRules = sheet.cssRules;
+      } catch (_error) {
+        continue;
+      }
+      if (!cssRules) continue;
+      for (const rule of cssRules) {
+        const cssText = rule.cssText || "";
+        if (cssText.startsWith("@font-face")) rules.push(cssText);
+      }
+    }
+    return rules;
+  }
+
+  async function buildInlinedFontCss() {
+    const ruleTexts = collectFontFaceRuleTexts();
+    if (ruleTexts.length === 0) return null;
+
+    const resolved = ruleTexts.map((cssText) => {
+      if (!SRC_DECLARATION_RE.test(cssText)) return null;
+      const srcMatch = cssText.match(/src\s*:\s*([^;}]+)[;}]/i);
+      if (!srcMatch) return null;
+      const url = extractFontUrl(srcMatch[1]);
+      if (!url) return null;
+      try {
+        return { cssText, url: new URL(url, document.baseURI).href };
+      } catch (_error) {
+        return null;
+      }
+    });
+
+    const dataUris = await Promise.all(
+      resolved.map((entry) => (entry ? fetchAsDataUri(entry.url) : Promise.resolve(null))),
+    );
+
+    const inlined = [];
+    let totalBytes = 0;
+    for (let index = 0; index < resolved.length; index += 1) {
+      const entry = resolved[index];
+      const dataUri = dataUris[index];
+      if (!entry || !dataUri) continue;
+      const approxBytes = dataUri.length * 0.75;
+      if (totalBytes + approxBytes > MAX_TOTAL_FONT_BYTES) break;
+      totalBytes += approxBytes;
+      inlined.push(entry.cssText.replace(SRC_DECLARATION_RE, `src: url("${dataUri}")`));
+    }
+    return inlined.length > 0 ? inlined.join("\n") : null;
+  }
+
+  function stripExternal(clone) {
+    const images = clone.querySelectorAll("img");
+    for (let index = 0; index < images.length; index += 1) {
+      const src = images[index].getAttribute("src");
+      if (src && !src.startsWith("data:")) images[index].removeAttribute("src");
+    }
+
+    const elements = clone.querySelectorAll("*");
+    for (let index = 0; index < elements.length; index += 1) {
+      const style = elements[index].style.cssText;
+      if (style && style.includes("url(")) {
+        elements[index].style.cssText = style.replace(
+          /url\(["']?(?!data:)[^)"']*["']?\)/gi,
+          "none",
+        );
+      }
+    }
+  }
+
+  function emitScroll() {
+    scrollRaf = 0;
+    if (!scrollForwarding) return;
+    postToTrustedTop({
+      type: "INLINE_EDIT_SCROLL",
+      scrollX: window.scrollX,
+      scrollY: window.scrollY,
+      capabilities: PICK_CAPABILITIES,
+    });
+  }
+
+  window.addEventListener(
+    "scroll",
+    function () {
+      if (!scrollForwarding || scrollRaf) return;
+      scrollRaf = requestAnimationFrame(emitScroll);
+    },
+    { passive: true, capture: true },
+  );
+
+  async function handleCaptureRequest(event) {
+    const requestId = event.data.requestId;
+    const scrollX = window.scrollX;
+    const scrollY = window.scrollY;
+    const width = window.innerWidth;
+    const height = window.innerHeight;
+
+    function postResult(dataUrl) {
+      postToTrustedTop({
+        type: "INLINE_EDIT_SCREENSHOT_RESULT",
+        requestId,
+        dataUrl,
+        scrollX,
+        scrollY,
+      });
+    }
+
+    try {
+      // Wait for any pending web fonts to resolve so both inline metrics and
+      // the @font-face inlining below see the same loaded faces.
+      if (document.fonts && document.fonts.ready) {
+        try {
+          await document.fonts.ready;
+        } catch (_error) {}
+      }
+
+      const clone = document.documentElement.cloneNode(true);
+      inlineAll(document.documentElement, clone);
+
+      const removedNodes = clone.querySelectorAll("script,link[rel=\"stylesheet\"],style");
+      for (let index = 0; index < removedNodes.length; index += 1) {
+        removedNodes[index].remove();
+      }
+
+      stripExternal(clone);
+
+      // Re-embed web fonts as data-URI @font-face rules so the SVG rasterizer
+      // can resolve them — external font URLs aren't fetched during
+      // foreignObject rendering, which would otherwise force a fallback face
+      // and change text metrics.
+      const inlinedFontCss = await buildInlinedFontCss();
+      if (inlinedFontCss) {
+        const styleEl = document.createElement("style");
+        styleEl.textContent = inlinedFontCss;
+        const head = clone.querySelector("head");
+        if (head) head.appendChild(styleEl);
+        else clone.insertBefore(styleEl, clone.firstChild);
+      }
+
+      const html = new XMLSerializer().serializeToString(clone);
+      const svg =
+        `<svg xmlns="http://www.w3.org/2000/svg" width="${width}" height="${height}">` +
+        '<foreignObject width="100%" height="100%">' +
+        `<div xmlns="http://www.w3.org/1999/xhtml" style="width:${width}px;height:${height}px;overflow:hidden">` +
+        `<div style="position:relative;left:-${scrollX}px;top:-${scrollY}px">` +
+        html +
+        "</div></div></foreignObject></svg>";
+      const svgUrl = `data:image/svg+xml;charset=utf-8,${encodeURIComponent(svg)}`;
+      const image = new Image();
+      image.onload = function () {
+        const canvas = document.createElement("canvas");
+        canvas.width = width;
+        canvas.height = height;
+        canvas.getContext("2d").drawImage(image, 0, 0);
+        postResult(canvas.toDataURL("image/png"));
+      };
+      image.onerror = function () {
+        postResult(null);
+      };
+      image.src = svgUrl;
+    } catch (_error) {
+      postResult(null);
+    }
+  }
+
+  window.addEventListener("message", function (event) {
+    if (!event.data) return;
+    // Only accept messages from the direct parent frame. Blocks sibling /
+    // unrelated-window postMessage senders that could otherwise reach us.
+    if (event.source !== window.parent) return;
+
+    const trustedParentOrigin = getTrustedParentOrigin(event);
+    if (!trustedParentOrigin) return;
+    trustedTopOrigin = trustedParentOrigin;
+
+    if (event.data.type === "INLINE_EDIT_PICK") {
+      const element = resolvePickTarget(event.data.x, event.data.y);
+      postToTrustedTop({
+        type: "INLINE_EDIT_PICK_RESULT",
+        seq: event.data.seq,
+        target: element ? describePickTarget(element, event.data.fresh === true) : null,
+      });
+      return;
+    }
+
+    if (event.data.type === "INLINE_EDIT_SCROLL_START") {
+      scrollForwarding = true;
+      emitScroll();
+      return;
+    }
+
+    if (event.data.type === "INLINE_EDIT_SCROLL_STOP") {
+      scrollForwarding = false;
+      if (scrollRaf) cancelAnimationFrame(scrollRaf);
+      scrollRaf = 0;
+      return;
+    }
+
+    if (event.data.type === "INLINE_EDIT_SCROLL_BY") {
+      const { deltaX, deltaY, deltaMode } = event.data;
+      if (!scrollForwarding || !Number.isFinite(deltaX) || !Number.isFinite(deltaY)) return;
+      if (deltaMode !== 0 && deltaMode !== 1 && deltaMode !== 2) return;
+      const lineHeight =
+        parseFloat(getComputedStyle(document.documentElement).lineHeight) || DEFAULT_LINE_HEIGHT;
+      const scaleX = deltaMode === 1 ? lineHeight : deltaMode === 2 ? window.innerWidth : 1;
+      const scaleY = deltaMode === 1 ? lineHeight : deltaMode === 2 ? window.innerHeight : 1;
+      // The selection overlay receives the wheel event instead of this iframe.
+      // Instant scrolling preserves trackpad deltas even on smooth-scroll sites.
+      window.scrollBy({ left: deltaX * scaleX, top: deltaY * scaleY, behavior: "instant" });
+      emitScroll();
+      return;
+    }
+
+    if (event.data.type !== "INLINE_EDIT_CAPTURE_REQUEST") return;
+
+    handleCaptureRequest(event);
+  });
+})();
+
+</script></body>
+</html>
