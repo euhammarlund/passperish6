@@ -7,7 +7,7 @@ import {
 } from "./engine.js";
 import { defaultParams, SPEC } from "./params.js";
 import { computeMatters } from "./matters.js";
-import { hypoScenarios } from "./hypo.js";
+import { hypoScenarios, HANDOFF_NEEDS, PLACES, conflictsOf } from "./hypo.js";
 import { humanTime, TERM_COL } from "./charts.js";
 import { sceneSvg, STEP_ORDER, KIND_COLS, linkList } from "./scenes.js";
 
@@ -98,7 +98,9 @@ const WINDOWS = [
   { id: "conservative", conf: [2, "Zircon evidence for early water and a molecular clock with wide error bars"], label: "600 Myr", hint: "First water 4.40 Ga to a cautious LUCA date of 3.8 Ga." },
   { id: "younger", near: "islands", far: "conservative", conf: [1, "Our reading of Korenaga 2021; the paper gives no start date"], label: "200 Myr, younger start", hint: "Land only as islands from the late Hadean (Korenaga 2021): start 4.00 Ga, LUCA at a cautious 3.8 Ga. With LUCA at 4.2 Ga this start leaves no window at all." },
 ];
+const MIXN = { basalt: "Basalt-derived sediment", felsic: "Granite-derived sediment", river: "River mud, mixed sources", vent: "Vent chimney minerals (green rust, LDH, brucite, iron sulfide)", raft: "Pumice raft", clay: "Clay only (smectite)" };
 function hypoSummary(st, M) {
+  if (st.place) { const pl = PLACES.find((x) => x.id === st.place); return `${pl ? pl.label.toLowerCase() : st.place}, ${st.T} C, pH ${st.pH}, ${st.mineral.startsWith("mix:") ? st.mineral.slice(4) + " mix" : st.mineral}, ${st.cycle.toLowerCase()}`; }
   const sc = (id) => String(M.scenarios.findIndex((x) => x.id === id) + 1);
   const min = st.mineral === "none" ? "no mineral" : st.mineral.startsWith("mix:") ? st.mineral.slice(4) + " mix" : st.mineral;
   return `T1 from setting ${sc(st.t1From)}, sites from ${sc(st.sitesFrom)}, ${st.cycle.toLowerCase()}, ${st.T} C, ${min}, pH ${st.pH}`;
@@ -619,7 +621,7 @@ export function createGuided(ctx) {
       </button>`;
     };
     const top = inv.ranks[0];
-    $("#hypoCards").innerHTML = card(7, "Best mix of known conditions", "Any mix of the known settings, cycles, temperatures, minerals, pH, salt and handoffs.", b.result, b.tl,
+    $("#hypoCards").innerHTML = card(7, "Best mix of known conditions", b.mode === "place" ? "The best single place that could exist, with any known conditions and handoffs that fit it." : "Any mix of the known settings, cycles, temperatures, minerals, pH, salt and handoffs, even if no place has it.", b.result, b.tl,
       `<span class="sc-line">Picked: ${esc(hypoSummary(b.state, M))}</span>`) +
       card(8, "Invented chemistry", `An invented helper, ${fmtSci(inv.K)} times faster, on every link of scenario 7.`, inv.result, inv.tl,
       `<span class="sc-line">Biggest lever: ${top && top.saved > 1e-6 ? esc(top.name) + ", saves " + esc(fmtMyr(top.saved)) + " Myr" : "none; every link already passes"}</span>`);
@@ -636,18 +638,56 @@ export function createGuided(ctx) {
     const st7 = b.state;
     const sc = (id) => (M.scenarios.find((x) => x.id === id) || { name: id }).name;
     const hName = (id) => { const h = M.handoffs.find((x) => x.id === id); return h ? `${id}, ${h.species_and_handoff}` : id; };
-    const minName = (id) => id === "none" ? "No mineral surface" : id.startsWith("mix:") ? "Mix: " + id.slice(4) : ((M.minerals.find((x) => x.id === id) || { name: id }).name);
-    const rows = [
-      ["Time to appear (T1) taken from", sc(st7.t1From), fmtMyr(b.result.t1) + " Myr"],
-      ["Number of sites taken from", sc(st7.sitesFrom), fmtSci(b.result.nSites) + " sites"],
-      ["Driving cycle", st7.cycle, humanTime(b.result.tCycleS) + " per cycle"],
-      ["Temperature", st7.T + " C", ""],
-      ["Mineral surface", minName(st7.mineral), ""],
-      ["pH, salinity, confinement", `pH ${st7.pH}, ${st7.sal} g per kg, ${st7.conf}`, ""],
-      ...Object.entries(st7.handoffs).map(([rid, h]) => ["Handoff for " + rid, hName(h), ""]),
-      ...(P.buildupOn === "on" ? [["Build-up place", st7.venue, ""]] : []),
+    const minName = (id) => id === "none" ? "No mineral surface" : id.startsWith("mix:") ? (MIXN[id.slice(4)] || id.slice(4)) : ((M.minerals.find((x) => x.id === id) || { name: id }).name);
+    segShow("#hypoModeSeg", P.hypoMode === "free" ? "free" : "place");
+    $$("#hypoModeSeg button").forEach((x) => { x.onclick = () => { ctx.P().hypoMode = x.dataset.v; ctx.recompute(); }; });
+    const isPlace = b.mode === "place";
+    $("#hypoModeHint").innerHTML = isPlace
+      ? "The model must choose one of seven physical places (the five real settings, plus two hybrids that combine an alkaline vent with land or a shore) and stay inside that place's temperature, pH, salinity, minerals and cycles. Every handoff must have the conditions it needs. Panspermia is left out because it is a delivery route, not a place."
+      : "The model may combine anything, even choices no single place has. Conflicts are listed below the table. Useful as an upper bound, not as a description of a place.";
+    const pl = isPlace ? b.place : null;
+    const prow = (k, v) => ({ cells: [esc(k), esc(v)] });
+    const placeRows = isPlace ? [
+      prow("Place", pl.label),
+      prow("What it is", pl.note),
+      prow("Depth and setting", pl.depth),
+      prow("Open to air, and drying", pl.air ? "Yes" : "No, always under water"),
+      prow("Sunlight and UV", pl.sun ? "Yes; with no ozone, UV-C reaches the surface" : "No, dark"),
+      prow("Land", pl.land),
+      prow("Temperature", `${st7.T} C (allowed here: ${pl.T[0]} to ${pl.T[1]} C)`),
+      prow("pH", `${st7.pH} (allowed: ${pl.pH[0]} to ${pl.pH[1]})`),
+      prow("Salinity", `${st7.sal} g per kg (allowed: ${pl.sal[0]} to ${pl.sal[1]})`),
+      prow("Mineral surface", minName(st7.mineral)),
+      prow("Share of bound molecules held in confined spaces", String(st7.conf)),
+      prow("Driving cycle", `${st7.cycle}, ${humanTime(b.result.tCycleS)} per cycle`),
+      prow("Time to appear (T1)", `${fmtMyr(b.result.t1)} Myr, from ${sc(st7.t1From)}${pl.parents.length > 1 ? " (the slower parent)" : ""}`),
+      prow("Number of sites", `${fmtSci(b.result.nSites)}, from ${sc(st7.sitesFrom)}${pl.parents.length > 1 ? " (the rarer parent)" : ""}`),
+      ...(P.buildupOn === "on" ? [prow("Where chains are built up", st7.venue)] : []),
+      prow("Molecules needed", "All building blocks are taken to be present here, as in the six settings. Supply is not counted unless the availability step S0 or a delivery route is switched on."),
+    ] : [
+      prow("Place", "None: a free mix"),
+      prow("Time to appear (T1)", `${fmtMyr(b.result.t1)} Myr, from ${sc(st7.t1From)}`),
+      prow("Number of sites", `${fmtSci(b.result.nSites)}, from ${sc(st7.sitesFrom)}`),
+      prow("Driving cycle", `${st7.cycle}, ${humanTime(b.result.tCycleS)} per cycle`),
+      prow("Temperature, pH, salinity", `${st7.T} C, pH ${st7.pH}, ${st7.sal} g per kg`),
+      prow("Mineral surface", minName(st7.mineral)),
+      prow("Share of bound molecules held in confined spaces", String(st7.conf)),
     ];
-    ctx.table($("#tblHypo7"), ["Choice", "What the model picked", "Value"], rows.map((r) => ({ cells: r.map(esc) })));
+    ctx.table($("#tblHypo7Place"), ["", "Scenario 7"], placeRows);
+    const rungName = (rid) => ({ S1: "S1, thermodynamic partitioning", S2: "S2, kinetic persistence", S3: "S3, accumulation and concentration", S4: "S4, autocatalytic amplification", S5: "S5, Darwinian selection" }[rid] || rid);
+    const hRows = Object.entries(st7.handoffs).map(([rid, h]) => {
+      const g = b.result.rungs.find((x) => x.rung === rid);
+      return { cells: [esc(rungName(rid)), esc(hName(h)), esc(HANDOFF_NEEDS[h] ? HANDOFF_NEEDS[h].text : ""), g ? esc(fmtSci(g.p)) : ""] };
+    });
+    ctx.table($("#tblHypo7"), ["Step", "Handoff the model picked", "What it needs", { label: "Chance per try", n: true }], hRows);
+    const cf = isPlace ? [] : conflictsOf(st7, M);
+    $("#hypo7Conflicts").innerHTML = isPlace ? "All handoffs have the conditions they need in this place." : (cf.length ? "Conflicts: " + cf.map(esc).join("; ") + "." : "No conflicts found.");
+    const placesList = isPlace ? b.places : [];
+    ctx.table($("#tblHypoPlaces"), ["Place", "Best conditions found", { label: "Total, Myr", n: true }, { label: "Successful tries per year", n: true }],
+      placesList.map((x) => ({ _cls: x.place.id === (pl && pl.id) ? "sel" : "", cells: x.none
+        ? [esc(x.place.label), "No allowed conditions let every step use a handoff it can", "", ""]
+        : [esc(x.place.label), esc(`${x.state.T} C, pH ${x.state.pH}, ${minName(x.state.mineral)}, ${x.state.cycle.toLowerCase()}`), esc(fmtMyr(x.total)), esc(fmtSci((x.result.attemptsPerS || 0) * secPerYr))] })));
+    if (!isPlace) $("#tblHypoPlaces").innerHTML = "<tbody><tr><td>Choose one place that could exist to compare places.</td></tr></tbody>";
     $("#hypoKField").innerHTML = ctx.sliderFor("hypoK");
     ctx.wireParamInputs($("#hypoKField"));
     $("#hypo8Kpis").innerHTML = [

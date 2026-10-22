@@ -119,11 +119,21 @@
   <div class="cards-6 cards-2" id="hypoCards"></div>
   <div class="card hypo-detail" id="hypoDetail" style="margin-top:14px">
     <h2>Scenario 7: the best mix of known conditions</h2>
-    <p class="sub">The model may take the time to appear (T1) from one setting and the number of sites from another, and choose any driving cycle, temperature, mineral or mineral mix, pH, salinity and confinement. It changes one choice at a time and keeps any change that helps, for three rounds. Biology (T4 and T5) is not up for choice.</p>
+    <p class="sub">The model chooses a place, then the driving cycle, temperature, mineral or mineral mix, pH, salinity, confinement and the handoff for each step. It changes one choice at a time and keeps any change that helps. As in the six settings, all steps happen one after another in the same place, on the same sites. Biology (T4 and T5) is not up for choice.</p>
+    <div class="field"><label><span class="flabel">How free the model is</span></label><div class="seg" id="hypoModeSeg">
+      <button data-v="place" aria-pressed="true">One place that could exist</button><button data-v="free" aria-pressed="false">Free mix, even if no place has it</button></div>
+      <p class="hint" id="hypoModeHint"></p></div>
     <div class="field"><label><span class="flabel">Handoffs (the named molecules for each step)</span></label><div class="seg" id="hypoHandSeg">
       <button data-v="best" aria-pressed="true">The model may pick any known handoff</button><button data-v="yours" aria-pressed="false">Keep the handoffs I set</button></div></div>
     <div class="kpis" id="hypo7Kpis"></div>
-    <div class="tbl-wrap" style="margin-top:10px"><table class="data" id="tblHypo7"></table></div>
+    <h3 style="margin-top:14px">What kind of place this is</h3>
+    <div class="tbl-wrap"><table class="data" id="tblHypo7Place"></table></div>
+    <h3 style="margin-top:14px">The chemistry it uses, step by step</h3>
+    <p class="sub">A handoff is the named reaction the model uses to stand for one step. Each comes with two times from the literature: how long the reaction takes, and how long its product lasts before it is lost. Their ratio sets the chance that the step succeeds on one try. Each handoff also needs certain conditions, listed here.</p>
+    <div class="tbl-wrap"><table class="data" id="tblHypo7"></table></div>
+    <p class="hint" id="hypo7Conflicts" style="margin-top:8px"></p>
+    <h3 style="margin-top:14px">Every place, at its best</h3>
+    <div class="tbl-wrap"><table class="data" id="tblHypoPlaces"></table></div>
     <h2 style="margin-top:22px">Scenario 8: invented chemistry</h2>
     <p class="sub">An invented helper makes one link this many times faster. For each setting, the table shows how much time the helper would save on each link. The largest saving points to the link where an unknown reaction would matter most. Hypothetical: no such helper has been shown.</p>
     <div id="hypoKField"></div>

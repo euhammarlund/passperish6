@@ -315,7 +315,7 @@ export function defaultParams() {
     felsicCurve: "tang", crustSetsBoron: "off", crustSetsMix: "off", chemAgeGa: null, landStart: "same",
     mineralMix: { smectite: 30, kaolinite: 15, mica: 15, chlorite: 15, quartz: 15, ferrihydrite: 10 },
     buildupOn: "off", buildupWhere: "own", buildupMix: "venue", buildupCond: "venue", buildupMolecule: "nucleotide",
-    hypoHandoffs: "best", hypoBoost: null, timelineTracks: null,
+    hypoHandoffs: "best", hypoMode: "place", hypoBoost: null, timelineTracks: null,
   };
   for (const [k, s] of Object.entries(SPEC)) p[k] = s.def;
   return p;
