@@ -90,7 +90,7 @@ export function computeEnvelope(p) {
     farBasis = "Typed in directly.";
   } else {
     const ev = p.farOptions.find((o) => o.id === p.farEventId) || p.farOptions[0];
-    farGa = ev.age;
+    farGa = ev.rel != null ? nearGa - ev.rel : ev.age;
     farLabel = ev.label;
     farBasis = ev.basis;
   }
@@ -191,9 +191,9 @@ export const DELIVERY_SOURCES = {
     refs: ["Pearce et al. 2017", "Glavin et al. 2025", "Furukawa et al. 2025"],
   },
   interstellar: {
-    label: "Interstellar organics and peptides", covers: ["S4"], stars: 1,
-    plain: "Amino acids and short peptides form on cold dust and ice before the Solar System, and some reach Earth inside meteorites and comets. Here they stand in for the carbon step (S4): ready-made organic carbon instead of CO2 pulled out on a sulfide surface.",
-    refs: ["Ioppolo et al. 2021", "Krasnokutski et al. 2022", "InterCat 2026 (glycylglycine in ice)"],
+    label: "Interstellar organics and peptides", covers: ["S4"], stars: 1, mode: "flux",
+    plain: "Amino acids and short peptides form on cold dust and ice before the Solar System. Most reach a planet gently inside fine dust (interplanetary dust particles), as a steady rain rather than as rare events. Here they stand in for the carbon step (S4): ready-made organic carbon instead of CO2 pulled out on a sulfide surface. A share of the tries at each receiving site finds enough of them to skip S4; the rest must still make the carbon in place. Because the rain is diluted in water, that share is small and a judgement.",
+    refs: ["Ioppolo et al. 2021", "Krasnokutski et al. 2022", "InterCat 2026 (glycylglycine in ice)", "Chyba and Sagan 1992 (dust as the main source of intact organics)"],
   },
   comet: {
     label: "Comet HCN", covers: [], stars: 2,
@@ -382,6 +382,8 @@ export function computeT4(p) {
 }
 
 // A whole scenario. Returns every intermediate so the UI can show the chain.
+export const FE_HANDOFFS = new Set(["H1", "H3", "H5", "H9"]);
+export const P_HANDOFFS = new Set(["H7", "H12"]);
 export function auditScenario(sc, p, model) {
   const temp = p.effectiveTempC;
 
@@ -410,7 +412,9 @@ export function auditScenario(sc, p, model) {
     const h = model.handoffs.find((x) => x.id === hid);
     if (!h) continue;
     const sm = sState ? surfaceMultipliers(h, rid, sState, model, surf.cond, p) : { t: 1, l: 1, ref: null, applied: false };
-    const boost = p.hypoBoost && p.hypoBoost[rid] ? p.hypoBoost[rid] : 1;
+    // Version 9: richer feedstock on another planet (iron, phosphate) speeds the handoffs that use it.
+    const feed = (FE_HANDOFFS.has(hid) ? (p.feedFe || 1) : 1) * (P_HANDOFFS.has(hid) ? (p.feedP || 1) : 1);
+    const boost = (p.hypoBoost && p.hypoBoost[rid] ? p.hypoBoost[rid] : 1) * feed;
     const st = handoffStateScaled(h, temp, p.eaTransfer, p.eaLoss, sm.t / boost, sm.l);
     const cur = cycleCurrency(h, st, cycle, tCycleS, p);
     if (cur.on) {
@@ -418,12 +422,12 @@ export function auditScenario(sc, p, model) {
       pJoint *= cur.p;
       rungs.push({ rung: rid, rungName: rung ? rung.name : rid, handoff: h, ...st,
         tauTransfer: cur.tauTransfer, tauLoss: cur.tauLoss, da: cur.da, logDa: Math.log10(cur.da), p: cur.p,
-        verdict: cur.verdict, verdictClass: cur.verdictClass, surface: sm, pNoSurface: st.base.p, currency: cur, pClock: st.p });
+        verdict: cur.verdict, verdictClass: cur.verdictClass, surface: sm, pNoSurface: st.base.p, currency: cur, pClock: st.p, feed });
       continue;
     }
     t2Sec += st.tauTransfer;
     pJoint *= st.p;
-    rungs.push({ rung: rid, rungName: rung ? rung.name : rid, handoff: h, ...st, surface: sm, pNoSurface: st.base.p, currency: cur, pClock: st.p });
+    rungs.push({ rung: rid, rungName: rung ? rung.name : rid, handoff: h, ...st, surface: sm, pNoSurface: st.base.p, currency: cur, pClock: st.p, feed });
   }
   // Version 7: the ribose step (H6), kept longer by borate where borate can collect.
   let borate = null;
@@ -462,19 +466,29 @@ export function auditScenario(sc, p, model) {
   const attemptsPerS = (pJoint * nSites) / tCycleS;
   const del = deliveryFor(sc, p);
   let rateDel = 0, pRest = pJoint, t2SecDel = t2Sec, perDelivery = 0, triesPerDelivery = 0;
+  const flux = del.on && del.src.mode === "flux";
+  const fShare = flux ? Math.min(1, Math.max(0, p.deliveryShare == null ? 0.001 : p.deliveryShare)) : 0;
   if (del.on) {
     pRest = 1; t2SecDel = 0;
     for (const x of rungs) {
       x.delivered = del.covers.includes(x.rung);
       if (!x.delivered) { pRest *= x.p; t2SecDel += tStep(x); }
     }
-    triesPerDelivery = Math.max(1, (p.deliveryWindowYr * SEC_PER_YR) / tCycleS);
-    perDelivery = pRest >= 1 ? 1 : -Math.expm1(triesPerDelivery * Math.log1p(-pRest));
-    rateDel = (p.deliveryRatePerMyr / SEC_PER_MYR) * perDelivery;
+    if (flux) {
+      // Version 9.2: a steady rain of dust. A share fShare of all tries at a receiving site finds the
+      // delivered molecules and skips the covered steps; the other tries must make everything in place.
+      triesPerDelivery = null;
+      perDelivery = fShare;
+      rateDel = (fShare * pRest * nSites) / tCycleS;
+    } else {
+      triesPerDelivery = Math.max(1, (p.deliveryWindowYr * SEC_PER_YR) / tCycleS);
+      perDelivery = pRest >= 1 ? 1 : -Math.expm1(triesPerDelivery * Math.log1p(-pRest));
+      rateDel = (p.deliveryRatePerMyr / SEC_PER_MYR) * perDelivery;
+    }
   }
   // If the covered steps cannot happen in place at all, only the delivered route is left.
   const blocked = del.on && p.deliveryBlocked === "yes";
-  const inPlacePerS = blocked ? 0 : attemptsPerS;
+  const inPlacePerS = blocked ? 0 : attemptsPerS * (1 - fShare);
   const viaDelivery = rateDel > inPlacePerS;
   if (viaDelivery) t2Sec = t2SecDel;
   const t2 = (t2Sec / SEC_PER_MYR) * p.t2Scale;
@@ -503,7 +517,7 @@ export function auditScenario(sc, p, model) {
     landFactor, landDelay, buildup, nSites, tCycleS, cycleName: cycle ? cycle.name : "unknown",
     pJoint, attemptsPerS, rungs, t4detail: t4obj, tempC: temp,
     currencyOn: rungs.some((x) => x.currency && x.currency.on),
-    borate, delivery: { ...del, rateDel, pRest, perDelivery, triesPerDelivery, viaDelivery, t3InPlace, blocked, pCovered, breakEven, share: (inPlacePerS + rateDel) > 0 ? rateDel / (inPlacePerS + rateDel) : 0 },
+    borate, delivery: { ...del, rateDel, pRest, perDelivery, triesPerDelivery, viaDelivery, t3InPlace, blocked, pCovered, breakEven, share: (inPlacePerS + rateDel) > 0 ? rateDel / (inPlacePerS + rateDel) : 0, flux, fShare },
     surface: surf, surfaceState: sState,
     workbookLow: sc.plotted_low_myr, workbookHigh: sc.plotted_high_myr,
   };

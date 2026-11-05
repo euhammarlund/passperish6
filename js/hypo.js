@@ -122,7 +122,7 @@ function placeValues(pl, model) {
     T: span(pl.T[0], pl.T[1], TEMPS), pH: span(pl.pH[0], pl.pH[1], [5, 6, 6.5, 7, 7.5, 8, 8.5, 9, 9.5, 10, 10.5, 11]),
     sal: span(pl.sal[0], pl.sal[1], [1, 5, 20, 35, 70, 100, 150]), conf: CONFS,
     mineral: pl.minerals.filter((m) => m === "none" || m.startsWith("mix:") || known.has(m)),
-    cycle: pl.cycles.filter((c) => model.cycles.some((x) => x.name === c)),
+    cycle: pl.cycles.filter((c) => model.cycles.some((x) => x.name === c && !x.weak)),
   };
 }
 
@@ -329,8 +329,7 @@ export function hypoScenarios(model, P, conventional) {
   const start = ok.length ? ok[0].scenario.id : model.scenarios[0].id;
   let best = P.hypoMode === "free" ? null : searchBestPlace(model, P);
   if (!best) best = { ...searchBestMix(model, P, start), mode: "free" };
-  const inv = inventChemistry(model, P, best);
-  const levers = leverMatrix(model, P, conventional, best);
-  _key = key; _val = { best, inv, levers, fastest: ok[0] || null };
+  // Version 9: scenario 8 (invented chemistry) is replaced by the table of what holds back the tries.
+  _key = key; _val = { best, fastest: ok[0] || null };
   return _val;
 }

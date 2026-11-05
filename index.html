@@ -62,7 +62,9 @@
     <button role="tab" data-view="timeline" aria-selected="false">14. Timeline and crust</button>
     <button role="tab" data-view="minerals" aria-selected="false">15. Minerals and build-up</button>
   </nav>
+  <div class="tries-strip" id="triesStrip" aria-live="polite"></div>
 </header>
+  <div class="planet-banner" id="planetBanner" hidden>Showing <strong>Mars</strong>. The window, temperature, day length, tides, iron, phosphate, crust and the odds of each kind of setting are set for Mars. The pages on the start of the clock, the timeline and the crust still describe Earth.</div>
 
 <main>
 
@@ -77,8 +79,12 @@
   </div>
 
   <div class="card">
-    <h2>Three choices are enough to begin</h2>
+    <h2>Choose a planet, then three choices are enough to begin</h2>
     <p class="sub">Everything else keeps a sensible default. You can open the detailed settings at the bottom of each page.</p>
+    <div class="field planet-field"><label><span class="flabel">Which planet?</span></label>
+        <div class="seg planet-seg" data-planet-seg><button data-v="earth" aria-pressed="true">Earth</button><button data-v="mars" aria-pressed="false">Mars</button></div>
+        <div class="hint planet-hint"></div></div>
+    <details class="more planet-more" id="planetFacts"><summary>What changes on Mars, and how the model uses it</summary><div class="tbl-wrap"><table class="data" id="tblPlanetFacts"></table></div><div class="tbl-wrap" style="margin-top:10px"><table class="data" id="tblPlanetSettings"></table></div></details>
     <div class="grid g-3">
       <div class="field">
         <label><span class="flabel">1. How long is the window?</span></label>
@@ -112,9 +118,16 @@
   </div>
   <div class="cards-6" id="scenarioCards"></div>
 
+  <div class="card" style="margin-top:18px" id="planetCompare">
+    <h2>Earth and Mars side by side: room for tries</h2>
+    <p class="sub">The same chemistry and biology, run with each planet's own window and conditions. Room for tries is how many full runs to LUCA's community fit one after another in the window, so 1.0 means exactly one. Values below 1 mean that not even one run fits.</p>
+    <div class="tbl-wrap"><table class="data" id="tblPlanetCompare"></table></div>
+    <p class="hint" id="planetCompareNote" style="margin-top:8px"></p>
+  </div>
+
   <div class="sec-head" style="margin-top:26px">
-    <h2>Two hypothetical settings</h2>
-    <p class="sub">Not places anyone has proposed, but questions put to the model. Scenario 7 lets the model pick any mix of the known conditions that gives the shortest time and the most tries. Scenario 8 lets it invent a helper (an ion, molecule or catalyst) for any one link, to show which link we may be underrating.</p>
+    <h2>A hypothetical setting, and what holds the tries back</h2>
+    <p class="sub">Scenario 7 is not a place anyone has proposed, but a question put to the model: which single place, with any of the known conditions, gives the shortest time and the most tries? Box 8 then asks, for every setting on the planet shown, which step limits the room for tries most.</p>
   </div>
   <div class="cards-6 cards-2" id="hypoCards"></div>
   <div class="card hypo-detail" id="hypoDetail" style="margin-top:14px">
@@ -134,12 +147,23 @@
     <p class="hint" id="hypo7Conflicts" style="margin-top:8px"></p>
     <h3 style="margin-top:14px">Every place, at its best</h3>
     <div class="tbl-wrap"><table class="data" id="tblHypoPlaces"></table></div>
-    <h2 style="margin-top:22px">Scenario 8: invented chemistry</h2>
-    <p class="sub">An invented helper makes one link this many times faster. For each setting, the table shows how much time the helper would save on each link. The largest saving points to the link where an unknown reaction would matter most. Hypothetical: no such helper has been shown.</p>
-    <div id="hypoKField"></div>
-    <div class="kpis" id="hypo8Kpis"></div>
-    <div class="tbl-wrap" style="margin-top:10px"><table class="data" id="tblHypo8"></table></div>
-    <p class="hint" id="hypo8Read" style="margin-top:8px"></p>
+  </div>
+
+  <div class="card" id="brakeCard" style="margin-top:14px">
+    <h2>8. What holds back the tries, and which stage is easiest and hardest</h2>
+    <p class="sub">For each setting, each step is made free in turn (instant and certain), and the room for tries is counted again. The number in each cell is how many more tries would fit. The biggest number in a row is the step that holds that setting back most (red bold overall, teal bold among the setting's own steps). Removing a chemical step also shortens the wait for luck, because every step has to succeed in the same place.</p>
+    <div class="tbl-wrap"><table class="data" id="tblBrakes"></table></div>
+    <p class="hint" id="brakeRead" style="margin-top:8px"></p>
+    <h3 style="margin-top:14px">The main brake on each planet</h3>
+    <div class="tbl-wrap"><table class="data" id="tblBrakePlanets"></table></div>
+    <h3 style="margin-top:14px">Easiest and hardest S stage, and why</h3>
+    <p class="sub">For each setting on the planet chosen above: the stage most and least likely to pass in one try, and the stage that is quickest and slowest per try. A try only counts if every stage passes in the same place, so the hardest stage sets how many tries are needed, and the slowest stage sets how long each try takes.</p>
+    <div class="tbl-wrap"><table class="data" id="tblStages"></table></div>
+    <p class="hint" id="stageRead" style="margin-top:8px"></p>
+    <h3 style="margin-top:14px">Why the tries differ on Earth and Mars</h3>
+    <p class="sub">The same setting, with the same chemistry choices, on both planets. The room for tries is the window left after the setting appears, divided by the time one try takes. So a planet can give more tries by having a longer window, a setting that appears sooner, or faster stages.</p>
+    <div class="tbl-wrap"><table class="data" id="tblStageWhy"></table></div>
+    <p class="hint" id="stageWhyRead" style="margin-top:8px"></p>
   </div>
 
   <details class="more">
@@ -156,7 +180,11 @@
     <h2>How the chemistry is filtered, step by step</h2>
     <p class="sub">Pick a setting, then step through. Each step shows where it happens, which named molecule stands for it, how fast it forms against how long it lasts, and how many tries it costs. Use the arrow keys or the buttons.</p>
   </div>
+  <div class="field planet-field"><label><span class="flabel">Which planet?</span></label>
+        <div class="seg planet-seg" data-planet-seg><button data-v="earth" aria-pressed="true">Earth</button><button data-v="mars" aria-pressed="false">Mars</button></div>
+        <div class="hint planet-hint"></div></div>
   <div class="chips" id="storyScenarios"></div>
+  <p class="hint" id="storyPlanetNote"></p>
   <div class="story-grid">
     <div class="fig story-scene"><div class="fig-body" id="storyScene"></div>
       <div class="stepper">

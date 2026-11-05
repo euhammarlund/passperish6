@@ -22,6 +22,10 @@
   --pass: #20808d;
   --marginal: #c08a1e;
   --fail: #a13544;
+  --mars-bg: #fdf3d4;
+  --mars-border: #e6c467;
+  --mars-ink: #6f4b00;
+  --mars-btn: #8f6200;
 
   --mono: "JetBrains Mono", ui-monospace, "SFMono-Regular", Menlo, monospace;
   --sans: "Switzer", system-ui, -apple-system, "Segoe UI", sans-serif;
@@ -497,3 +501,62 @@ tr.target td { background: #fbf0da; }
   #figTimeline { touch-action: pan-x pan-y; }
   #figTimeline svg, #figZoom svg { max-width: none; width: 760px; }
 }
+
+/* v9: room-for-tries strip, planet switch, brakes */
+.tries-strip { max-width: 1360px; margin: 0 auto; padding: 6px 28px 10px; }
+.ts-head { display: flex; align-items: baseline; gap: 12px; flex-wrap: wrap; margin-bottom: 6px; }
+.ts-title { font-weight: 700; font-size: 14px; color: var(--dark-teal); letter-spacing: 0.01em; }
+.ts-planet { font-size: 12px; color: var(--muted); }
+.ts-head .linkbtn { margin-left: auto; font-size: 12px; }
+.ts-cells { display: grid; grid-template-columns: repeat(6, minmax(0, 1fr)); gap: 6px; }
+.ts-cell { border: 1px solid var(--border); border-radius: var(--r); background: var(--surface-alt); padding: 5px 8px; display: grid; grid-template-columns: auto 1fr; column-gap: 6px; align-items: baseline; }
+.ts-n { font-family: var(--mono); font-size: 11px; color: var(--muted); }
+.ts-name { font-size: 11.5px; color: var(--muted); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.ts-v { grid-column: 1 / -1; font-size: 22px; line-height: 1.15; color: var(--dark-teal); font-variant-numeric: tabular-nums; }
+.ts-d { grid-column: 1 / -1; font-size: 11.5px; font-variant-numeric: tabular-nums; }
+.ts-d.up { color: var(--pass); font-weight: 600; }
+.ts-d.down { color: var(--fail); font-weight: 600; }
+.ts-d.same { color: var(--faint); }
+.ts-cell.nofit .ts-v { color: var(--fail); }
+.planet-banner { margin: 0; padding: 6px 28px; font-size: 12.5px; color: #5a2a14; background: #f6e3d9; border-top: 1px solid #e5c3b2; }
+body[data-planet="mars"] .ts-title, body[data-planet="mars"] .ts-v { color: var(--mars-ink); }
+body[data-planet="mars"] .tries-strip .ts-cell { background: var(--mars-bg); border-color: var(--mars-border); }
+.planet-field { margin: 10px 0 12px; }
+.planet-seg button { min-width: 90px; }
+body[data-planet="mars"] .planet-seg button[aria-pressed="true"] { background: var(--mars-btn); border-color: var(--mars-btn); color: #fff; }
+.sc-tries { display: flex; align-items: baseline; gap: 8px; margin: 4px 0 2px; }
+.sc-tries-k { font-size: 12px; color: var(--muted); text-transform: uppercase; letter-spacing: 0.04em; }
+.sc-tries-v { font-size: 28px; line-height: 1; color: var(--dark-teal); font-variant-numeric: tabular-nums; }
+body[data-planet="mars"] .sc-tries-v { color: var(--mars-ink); }
+body[data-planet="mars"] #scenarioCards .sc-card, body[data-planet="mars"] #hypoCards .sc-card { background: var(--mars-bg); border-color: var(--mars-border); }
+body[data-planet="mars"] #scenarioCards .sc-card.nofit .sc-tries-v, body[data-planet="mars"] .ts-cell.nofit .ts-v { color: var(--fail); }
+.mars-col { background: var(--mars-bg); }
+th.mars-col { color: var(--mars-ink); }
+.mars-ink { color: var(--mars-ink); }
+.brake-top { color: var(--fail); }
+#tblBrakes td { white-space: nowrap; } #tblBrakes th { white-space: normal; min-width: 64px; }
+@media (max-width: 640px) {
+  .tries-strip { padding: 6px 12px 8px; }
+  .ts-cells { display: flex; overflow-x: auto; }
+  .ts-cell { flex: 0 0 120px; }
+  .ts-v { font-size: 18px; }
+  .planet-banner { padding: 6px 12px; }
+}
+.brake-own { color: var(--teal); }
+#tblPlanetCompare strong.num, #tblBrakes strong.num { font-size: 16px; font-family: var(--mono); }
+.planet-more { margin: 4px 0 16px; }
+#v-start .conf-legend { margin-top: 16px; }
+
+/* v9.2: where the time goes, inside each tries cell */
+.ts-bar { grid-column: 1 / -1; display: flex; height: 5px; margin-top: 4px; border-radius: 3px; overflow: hidden; background: var(--border); }
+.ts-bar i, .ts-legend i { display: inline-block; height: 100%; }
+.tb-a { background: var(--olive); } .tb-c { background: var(--teal); } .tb-b { background: var(--mauve); }
+.ts-legend { font-size: 11.5px; color: var(--muted); display: inline-flex; align-items: center; gap: 4px; }
+.ts-legend i { width: 10px; height: 8px; border-radius: 2px; margin-left: 6px; }
+.ts-note { margin-top: 6px; font-size: 12.5px; color: #5a2a14; background: #f6e3d9; border: 1px solid #e5c3b2; border-radius: var(--r); padding: 6px 10px; }
+.stage-cell { min-width: 190px; white-space: normal; font-size: 12.5px; line-height: 1.45; }
+.stage-cell .st-name { font-weight: 600; }
+.stage-cell .st-why { color: var(--muted); display: block; margin-top: 2px; }
+#tblStages td, #tblStageWhy td { vertical-align: top; }
+@media (max-width: 640px) { .ts-legend { display: none; } }
+#tblStageWhy .stage-cell { display: block; min-width: 320px; }

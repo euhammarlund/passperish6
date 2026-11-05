@@ -10,6 +10,8 @@ import { computeMatters } from "./matters.js";
 import { hypoScenarios, HANDOFF_NEEDS, PLACES, conflictsOf } from "./hypo.js";
 import { humanTime, TERM_COL } from "./charts.js";
 import { sceneSvg, STEP_ORDER, KIND_COLS, linkList } from "./scenes.js";
+import { MARS_WINDOWS, PLANET_FACTS, MARS_SETTINGS, PLANETS } from "./planet.js";
+import { brakeTable, triesExact, stageSummary, planetWhy, stepSeconds } from "./brakes.js";
 
 const C = {
   teal: "#20808d", terra: "#a84b2f", darkTeal: "#1b474d", cyan: "#bce2e7", mauve: "#944454",
@@ -111,9 +113,12 @@ const SPLIT_PRESETS = [
   { id: "slow", rate: 0.03, label: "Slow: 23 Myr", hint: "At the low end of the modern rates." },
   { id: "fast", rate: 0.693, label: "Fast, empty world: 1 Myr", hint: "One split per million years. A judgement, not a measurement." },
 ];
+const BRAKE_SHORT = { T1: "T1 appears", S0: "S0 supply", S1: "S1 sorting", S2: "S2 lasting", S2r: "S2 ribose", S3: "S3 gathering", S4: "S4 copying itself", S5: "S5 bound RNA", S5b: "S5 build-up", T4: "S5 selection (T4)", T5: "LUCA's community (T5)" };
+const winsFor = (P) => (P.planet === "mars" ? MARS_WINDOWS : WINDOWS);
+const fmtTries = (t) => (t >= 100 ? String(Math.round(t)) : t.toFixed(1));
 const winKey = (P) => {
   if (P.nearMode !== "event" || P.farMode !== "event") return null;
-  const w = WINDOWS.find((x) => (x.near || "water") === P.nearEventId && (x.far || x.id) === P.farEventId);
+  const w = winsFor(P).find((x) => (x.near || "water") === P.nearEventId && (x.far || x.id) === P.farEventId);
   return w ? w.id : null;
 };
 const ECO_PRESETS = {
@@ -403,13 +408,84 @@ export function createGuided(ctx) {
     root.querySelectorAll("button").forEach((b) => b.setAttribute("aria-pressed", String(b.dataset.v === v)));
   }
 
+  function buildWindowSeg() {
+    const P = ctx.P();
+    const root = $("#gWindowSeg");
+    root.dataset.planet = P.planet;
+    root.innerHTML = winsFor(P).map((w) => `<button data-v="${w.id}" aria-pressed="false">${esc(w.label)}</button>`).join("");
+    segWire("#gWindowSeg", (id) => { const P = ctx.P(); const w = winsFor(P).find((x) => x.id === id); P.nearMode = "event"; P.nearEventId = w.near || "water"; P.farMode = "event"; P.farEventId = w.far || w.id; ctx.rebuild(); ctx.recompute(); });
+  }
+
+  function renderPlanet(env, results) {
+    const P = ctx.P();
+    if ($("#gWindowSeg").dataset.planet !== P.planet) buildWindowSeg();
+    $$("[data-planet-seg] button").forEach((b) => b.setAttribute("aria-pressed", String(b.dataset.v === P.planet)));
+    const mars = P.planet === "mars";
+    $$(".planet-hint").forEach((h) => { h.innerHTML = mars
+      ? "Mars: the same chemistry and biology, with Mars's window, a colder chemistry (20 C), a 24.66 h day, weak tides, more iron and phosphate, a basaltic crust, and different odds for each kind of setting. Every change and its source is listed on the Start here page, under What changes on Mars."
+      : "Earth: the settings as in the manuscript. Switch to Mars to see how the same settings fare with Mars's conditions."; });
+    ctx.table($("#tblPlanetFacts"), ["Property", "Earth", "Mars", "How the model uses it", "Source"],
+      PLANET_FACTS.map((f) => ({ cells: [esc(f.prop), esc(f.earth), esc(f.mars), esc(f.used), f.url ? `<a href="${esc(f.url)}" target="_blank" rel="noopener">${esc(f.src)}</a>` : esc(f.src)] })));
+    const M = ctx.MODEL();
+    ctx.table($("#tblPlanetSettings"), ["Setting on Mars", { label: "Time to appear, times Earth's", n: true }, { label: "Sites, times Earth's", n: true }, "Why (our judgement, Tier C)"],
+      M.scenarios.map((sc, i) => { const m = MARS_SETTINGS[sc.id] || { t1: 1, sites: 1, note: "" }; return { cells: [esc(`${i + 1}. ${sc.name}`), esc(String(m.t1)), esc(String(m.sites)), esc(m.note)] }; }));
+    const sc = results[st.scenario] ? results[st.scenario].scenario : null;
+    const sn = $("#storyPlanetNote");
+    if (sn) sn.innerHTML = mars && sc && sc.mars_note ? `<strong>On Mars:</strong> ${esc(sc.mars_note)}` : "";
+  }
+
+  function renderCompare() {
+    if (!$("#tblPlanetCompare") || !ctx.planetRun) return;
+    const E = ctx.planetRun("earth"), Mr = ctx.planetRun("mars");
+    const tri = (R, i) => (R.env.valid ? triesExact(R.results[i], R.env.budgetMyr, R.P) : 0);
+    const cur = ctx.P().planet;
+    const rows = E.results.map((r, i) => {
+      const te = tri(E, i), tm = tri(Mr, i);
+      const d = tm - te;
+      return { cells: [esc(`${i + 1}. ${r.scenario.name}`), `<strong class="num">${esc(fmtTries(te))}</strong>`, esc(fmtMyr(r.total)), `<strong class="num">${esc(fmtTries(tm))}</strong>`, esc(fmtMyr(Mr.results[i].total)),
+        esc(Math.abs(d) < 0.05 ? "about the same" : (d > 0 ? "Mars has " + fmtTries(d) + " more" : "Mars has " + fmtTries(-d) + " fewer"))] };
+    });
+    ctx.table($("#tblPlanetCompare"), ["Setting", { label: `Earth: room for tries`, n: true }, { label: "Earth: one run, Myr", n: true },
+      { label: `Mars: room for tries`, n: true }, { label: "Mars: one run, Myr", n: true }, "Difference"], rows);
+    $("#planetCompareNote").innerHTML = `Both columns use your current chemistry and biology choices. Each planet keeps its own window and temperature: Earth ${esc(fmtMyr(E.env.budgetMyr))} Myr, ${esc(E.env.nearGa.toFixed(2))} to ${esc(E.env.farGa.toFixed(2))} Ga at ${esc(String(Math.round(E.env.workingTempC)))} C; Mars ${esc(fmtMyr(Mr.env.budgetMyr))} Myr, ${esc(Mr.env.nearGa.toFixed(2))} to ${esc(Mr.env.farGa.toFixed(2))} Ga at ${esc(String(Math.round(Mr.env.workingTempC)))} C. You are now looking at ${esc(PLANETS[cur].label)}. The Mars window has no LUCA date at its end: it is either the same length as Earth's or the time until the conditions closed.`;
+    return { E, Mr };
+  }
+
+  function renderBrakes(env, results, both) {
+    const P = ctx.P(), M = ctx.MODEL();
+    if (!$("#tblBrakes")) return;
+    const B = brakeTable(M, P, results, env.budgetMyr);
+    const head = ["Setting", { label: "Room for tries now", n: true }, ...B.cols.map((c) => ({ label: BRAKE_SHORT[c.id] || c.label, n: true, title: c.label })), { label: "S6 preservation", n: true }];
+    const rows = B.rows.map((row, i) => ({ cells: [esc(`${i + 1}. ${row.r.scenario.name}`), `<strong class="num">${esc(fmtTries(row.base))}</strong>`,
+      ...row.cells.map((c, j) => { if (!c) return '<span class="muted">not used</span>'; const t = c.gain > 0.05 ? "+" + fmtTries(c.gain) : "0"; return j === row.top ? `<strong class="brake-top">${esc(t)}</strong>` : j === row.topOwn ? `<strong class="brake-own">${esc(t)}</strong>` : esc(t); }),
+      '<span class="muted">after LUCA</span>'] }));
+    ctx.table($("#tblBrakes"), head, rows);
+    const word = (row) => (row.topOwn >= 0 ? B.cols[row.topOwn].label : "only the shared biology");
+    const bioTop = B.rows.filter((row) => row.top >= 0 && ["T4", "T5"].includes(B.cols[row.top].id)).length;
+    $("#brakeRead").innerHTML = `Red bold: the biggest brake overall. Teal bold: the biggest brake among the setting's own steps (the time to appear and the chemistry S0 to S5), which is where settings differ. ` +
+      (bioTop ? `On ${esc(PLANETS[P.planet].label)}, the biology that every setting shares (copying with selection and LUCA's community) is the biggest brake in ${bioTop} of 6 settings. ` : "") +
+      `The setting's own main brake: ` + B.rows.map((row, i) => `${i + 1}. ${esc(word(row))}`).join("; ") +
+      `. S6, preservation, decides whether a trace survives in the rocks; it comes after LUCA, so it uses no time in the window and cannot change the room for tries.`;
+    const bl = $("#brakeCardList");
+    if (bl) bl.innerHTML = B.rows.map((row, i) => `<strong>${i + 1}.</strong> ${esc(row.topOwn >= 0 ? B.cols[row.topOwn].label : "only the shared biology")}`).join("<br>");
+    renderStages(results);
+    if (both) renderStageWhy(both);
+    if (!both) return;
+    const tops = (R) => brakeTable(R.MODEL, R.P, R.results, R.env.budgetMyr);
+    const BE = tops(both.E), BM = tops(both.Mr);
+    const cellOf = (Bx, i) => { const row = Bx.rows[i]; return row.topOwn >= 0 ? `${esc(Bx.cols[row.topOwn].label)} <span class="muted">(+${esc(fmtTries(row.cells[row.topOwn].gain))})</span>` : '<span class="muted">only the shared biology</span>'; };
+    ctx.table($("#tblBrakePlanets"), ["Setting", "Its own main brake on Earth (tries gained if it were free)", "Its own main brake on Mars (tries gained if it were free)"],
+      M.scenarios.map((sc, i) => ({ cells: [esc(`${i + 1}. ${sc.name}`), cellOf(BE, i), cellOf(BM, i)] })));
+    return { B };
+  }
+
   function build() {
     const M = ctx.MODEL();
     // start page choices
-    $("#gWindowSeg").innerHTML = WINDOWS.map((w) => `<button data-v="${w.id}" aria-pressed="false">${esc(w.label)}</button>`).join("");
+    buildWindowSeg();
+    $$("[data-planet-seg] button").forEach((b) => { b.onclick = () => ctx.setPlanet(b.dataset.v); });
     $("#gChemSeg").innerHTML = Object.entries(CHEM_PRESETS).map(([k, v]) => `<button data-v="${k}" aria-pressed="false">${esc(v.label)}</button>`).join("");
     $("#gEcoSeg").innerHTML = Object.entries(ECO_PRESETS).map(([k, v]) => `<button data-v="${k}" aria-pressed="false">${esc(v.label)}</button>`).join("");
-    segWire("#gWindowSeg", (id) => { const P = ctx.P(); const w = WINDOWS.find((x) => x.id === id); P.nearMode = "event"; P.nearEventId = w.near || "water"; P.farMode = "event"; P.farEventId = w.far || w.id; ctx.rebuild(); ctx.recompute(); });
     segWire("#gChemSeg", (name) => { applyChem(ctx.P(), name); ctx.rebuild(); ctx.recompute(); ctx.toast(CHEM_PRESETS[name].label + " chemistry loaded"); });
     const ecoSet = (k) => { const P = ctx.P(); const e = ECO_PRESETS[k]; if (k === "none") P.ecoOn = false; else { P.ecoOn = true; P.ecoMode = "computed"; P.ecoSpecies = e.X; P.ecoInteractions = e.Y; } ctx.recompute(); };
     segWire("#gEcoSeg", ecoSet);
@@ -555,7 +631,7 @@ export function createGuided(ctx) {
     segShow("#gWindowSeg", winKey(P));
     segShow("#gChemSeg", chemOf(P));
     segShow("#gEcoSeg", ecoOf(P));
-    const w = WINDOWS.find((x) => x.id === winKey(P));
+    const w = winsFor(P).find((x) => x.id === winKey(P));
     const hintWith = (o, fallback) => o ? `${esc(o.hint)} <span class="conf-inline">${starsHtml(o.conf[0], o.conf[1])}</span>` : esc(fallback);
     $("#gWindowHint").innerHTML = hintWith(w, `A custom window of ${fmtMyr(env.budgetMyr)} Myr, set in the full workbench.`);
     const c = chemOf(P);
@@ -572,7 +648,7 @@ export function createGuided(ctx) {
       ["The window", fmtMyr(env.budgetMyr) + " Myr", `${env.nearGa.toFixed(2)} to ${env.farGa.toFixed(2)} Ga`],
       ["Fastest setting", fmtMyr(best.total) + " Myr", best.scenario.name],
       ["Settings that fit", `${nFit} of ${results.length}`, "with the current choices"],
-      ["Most tries that stopped", cnt(most), "before ours, in one setting"],
+      ["Most room for tries", fmtTries(Math.max(...results.map((r) => triesExact(r, env.budgetMyr, P)))), "in one setting, on " + PLANETS[P.planet].label],
     ].map(([k, v, n]) => `<div class="kpi"><div class="k">${esc(k)}</div><div class="v">${esc(v)}</div><div class="n">${esc(n)}</div></div>`).join("");
 
     const cardMax = Math.max(env.budgetMyr, ...results.map((r) => Math.min(r.total, env.budgetMyr * 2)));
@@ -587,7 +663,8 @@ export function createGuided(ctx) {
         <span class="sc-short">${esc((STORY[r.scenario.id] || {}).short || "")}</span>
         ${miniWindowSvg(r, env.budgetMyr, tl, cardMax)}
         <span class="sc-line"><strong class="num">${esc(fmtMyr(r.total))} Myr</strong> needed, mostly ${esc(dom)}</span>
-        <span class="sc-line">${tl.remaining >= 0 ? `${esc(fmtMyr(tl.remaining))} Myr left, room for ${esc(cnt(tl.tries))} tries` : `${esc(fmtMyr(-tl.remaining))} Myr short`}</span>
+        <span class="sc-tries"><span class="sc-tries-k">Room for tries</span><strong class="sc-tries-v num">${esc(fmtTries(triesExact(r, env.budgetMyr, P)))}</strong></span>
+        <span class="sc-line">${tl.remaining >= 0 ? `${esc(fmtMyr(tl.remaining))} Myr left after one run` : `${esc(fmtMyr(-tl.remaining))} Myr short of one run`}</span>
         <span class="pill ${badge}">${esc(v.text)}</span>
         <span class="sc-go">Follow the steps</span>
       </button>`;
@@ -614,18 +691,19 @@ export function createGuided(ctx) {
         <span class="sc-short">${esc(short)}</span>
         ${miniWindowSvg(r, env.budgetMyr, tl, cardMax)}
         <span class="sc-line"><strong class="num">${esc(fmtMyr(r.total))} Myr</strong> needed${fast ? `, against ${esc(fmtMyr(fast.total))} for the fastest of the six` : ""}</span>
-        <span class="sc-line">${tl.remaining >= 0 ? `${esc(fmtMyr(tl.remaining))} Myr left, room for ${esc(cnt(tl.tries))} tries` : `${esc(fmtMyr(-tl.remaining))} Myr short`}; ${esc(fmtSci(rate(r)))} successful tries per year${fast && rate(fast) > 0 ? ` (${esc(fmtSci(rate(r) / rate(fast)))} times the fastest of the six)` : ""}</span>
+        <span class="sc-tries"><span class="sc-tries-k">Room for tries</span><strong class="sc-tries-v num">${esc(fmtTries(triesExact(r, env.budgetMyr, P)))}</strong></span>
+        <span class="sc-line">${esc(fmtSci(rate(r)))} successful tries per year${fast && rate(fast) > 0 ? ` (${esc(fmtSci(rate(r) / rate(fast)))} times the fastest of the six)` : ""}</span>
         ${extra}
         <span class="pill ${badge}">${esc(v.text)}</span>
         <span class="sc-go">See what it chose</span>
       </button>`;
     };
-    const top = inv.ranks[0];
     $("#hypoCards").innerHTML = card(7, "Best mix of known conditions", b.mode === "place" ? "The best single place that could exist, with any known conditions and handoffs that fit it." : "Any mix of the known settings, cycles, temperatures, minerals, pH, salt and handoffs, even if no place has it.", b.result, b.tl,
       `<span class="sc-line">Picked: ${esc(hypoSummary(b.state, M))}</span>`) +
-      card(8, "Invented chemistry", `An invented helper, ${fmtSci(inv.K)} times faster, on every link of scenario 7.`, inv.result, inv.tl,
-      `<span class="sc-line">Biggest lever: ${top && top.saved > 1e-6 ? esc(top.name) + ", saves " + esc(fmtMyr(top.saved)) + " Myr" : "none; every link already passes"}</span>`);
-    $$("#hypoCards .sc-card").forEach((el) => { el.onclick = () => { const d = $("#hypoDetail"); if (d) d.scrollIntoView({ behavior: "smooth", block: "start" }); }; });
+      `<button class="sc-card hypo brake-card" data-h="8"><span class="sc-num">8</span><span class="sc-name">What holds back the tries</span>
+        <span class="sc-short">For each setting on ${esc(PLANETS[P.planet].label)}, the step of its own that limits the room for tries most. "Only the shared biology" means its own steps are already quick.</span>
+        <span class="sc-line" id="brakeCardList"></span><span class="sc-go">See the table</span></button>`;
+    $$("#hypoCards .sc-card").forEach((el) => { el.onclick = () => { const d = $(el.dataset.h === "8" ? "#brakeCard" : "#hypoDetail"); if (d) d.scrollIntoView({ behavior: "smooth", block: "start" }); }; });
     segShow("#hypoHandSeg", P.hypoHandoffs || "best");
     $$("#hypoHandSeg button").forEach((x) => { x.onclick = () => { ctx.P().hypoHandoffs = x.dataset.v; ctx.recompute(); }; });
     const kp = (k, v, n) => `<div class="kpi"><div class="k">${esc(k)}</div><div class="v">${esc(v)}</div><div class="n">${esc(n)}</div></div>`;
@@ -633,7 +711,7 @@ export function createGuided(ctx) {
       kp("Scenario 7 needs", fmtMyr(b.total) + " Myr", fast ? `fastest of the six: ${fmtMyr(fast.total)} Myr (${fast.scenario.name})` : ""),
       kp("Floor no chemistry can beat", fmtMyr(b.result.t1 + b.result.t4 + b.result.t5) + " Myr", "T1 plus the biology terms T4 and T5"),
       kp("Successful tries per year", fmtSci(rate(b.result)), fast ? `fastest of the six: ${fmtSci(rate(fast))}` : ""),
-      kp("Runs that fit", cnt(b.tl.tries), "in the window, one after another"),
+      kp("Room for tries", fmtTries(triesExact(b.result, env.budgetMyr, P)), "full runs that fit in the window, one after another"),
     ].join("");
     const st7 = b.state;
     const sc = (id) => (M.scenarios.find((x) => x.id === id) || { name: id }).name;
@@ -688,24 +766,6 @@ export function createGuided(ctx) {
         ? [esc(x.place.label), "No allowed conditions let every step use a handoff it can", "", ""]
         : [esc(x.place.label), esc(`${x.state.T} C, pH ${x.state.pH}, ${minName(x.state.mineral)}, ${x.state.cycle.toLowerCase()}`), esc(fmtMyr(x.total)), esc(fmtSci((x.result.attemptsPerS || 0) * secPerYr))] })));
     if (!isPlace) $("#tblHypoPlaces").innerHTML = "<tbody><tr><td>Choose one place that could exist to compare places.</td></tr></tbody>";
-    $("#hypoKField").innerHTML = ctx.sliderFor("hypoK");
-    ctx.wireParamInputs($("#hypoKField"));
-    $("#hypo8Kpis").innerHTML = [
-      kp("Scenario 8 needs", fmtMyr(inv.total) + " Myr", "helper on every link of scenario 7"),
-      kp("Of that, biology", fmtMyr(inv.biology) + " Myr", "T4 and T5: no catalyst touches them"),
-      kp("Successful tries per year", fmtSci(rate(inv.result)), ""),
-    ].join("");
-    const L = H.levers;
-    const head = ["Link", ...L.cols.map((c) => ({ label: c.id === "SC7" ? "7" : String(M.scenarios.findIndex((x) => x.id === c.id) + 1), n: true }))];
-    const lrows = L.rows.map((row) => ({ cells: [esc(row.id + ", " + row.name), ...row.cells.map((c, i) => {
-      if (!c) return "";
-      const isTop = L.top[i] && L.top[i].id === row.id && c.saved > 1e-3;
-      const t = c.saved > 1e-3 ? fmtMyr(c.saved) : "0";
-      return isTop ? `<strong>${esc(t)}</strong>` : esc(t);
-    })] }));
-    ctx.table($("#tblHypo8"), head, lrows);
-    const tops = L.top.map((t, i) => t && t.saved > 1e-3 ? `${L.cols[i].id === "SC7" ? "7" : M.scenarios.findIndex((x) => x.id === L.cols[i].id) + 1}: ${t.id} (${fmtMyr(t.saved)} Myr)` : null).filter(Boolean);
-    $("#hypo8Read").innerHTML = `Time saved, in Myr, if an invented helper made that one link ${esc(fmtSci(L.K))} times faster; columns are the settings 1 to 6 and scenario 7. ${tops.length ? `The biggest lever in each setting: ${esc(tops.join("; "))}. These are the links where a reaction we do not yet appreciate would change the time audit most.` : "No link saves a measurable time: with the current chemistry every step already passes, so the totals are set by the time to appear and by biology. Load the hard chemistry on this page to see which link an unknown reaction would need to fix."}`;
   }
 
   function renderStory(env, results) {
@@ -962,8 +1022,69 @@ export function createGuided(ctx) {
     $("#mattersStill").textContent = R.still.length ? "No visible effect on the total (less than 5 per cent) for these inputs: " + R.still.map((r) => lc(r.label)).join("; ") + "." : "";
   }
 
+  // v9.2: easiest, hardest, fastest and slowest stage, and why.
+  function stageCell(c, what, allEasy) {
+    const val = what === "p" ? `${esc(c.pTxt)} per try` : `${esc(c.timeTxt)} per try`;
+    if (allEasy) return `<div class="stage-cell"><span class="st-name">None is hard here.</span> Every stage passes almost every time; the least certain is ${esc(c.label)}<span class="st-why">${esc(c.why.join("; "))}.</span></div>`;
+    return `<div class="stage-cell"><span class="st-name">${esc(c.label)}</span>: ${val}<span class="st-why">${esc(c.why.join("; "))}.</span></div>`;
+  }
+  function renderStages(results) {
+    if (!$("#tblStages")) return;
+    const P = ctx.P();
+    const S = results.map((r) => stageSummary(r, humanTime));
+    ctx.table($("#tblStages"), ["Setting", "Easiest (most likely to pass)", "Hardest (least likely to pass)", "Fastest", "Slowest", { label: "All stages pass in one try", n: true }],
+      results.map((r, i) => ({ cells: [esc(`${i + 1}. ${r.scenario.name}`), stageCell(S[i].easiest, "p"), stageCell(S[i].hardest, "p", S[i].hardest.p > 0.999), stageCell(S[i].fastest, "t"), stageCell(S[i].slowest, "t"), esc(S[i].pJointTxt)] })));
+    const chemShare = Math.max(...results.map((r) => (r.t2 + r.t3) / Math.max(1e-12, r.total)));
+    const hardCount = {};
+    S.forEach((x) => { if (x.hardest.p <= 0.999) hardCount[x.hardest.label] = (hardCount[x.hardest.label] || 0) + 1; });
+    const commonHard = Object.entries(hardCount).sort((a, b) => b[1] - a[1])[0];
+    const slowCount = {};
+    S.forEach((x) => { slowCount[x.slowest.label] = (slowCount[x.slowest.label] || 0) + 1; });
+    const commonSlow = Object.entries(slowCount).sort((a, b) => b[1] - a[1])[0];
+    $("#stageRead").innerHTML = `On ${esc(PLANETS[P.planet].label)}, ` + (commonHard ? `the most common hardest stage is <strong>${esc(commonHard[0])}</strong> (${commonHard[1]} of ${S.length} settings), ` : `no stage is hard in any setting (all pass almost every time), `) + `and the most common slowest stage is <strong>${esc(commonSlow[0])}</strong> (${commonSlow[1]} of ${S.length}). ` +
+      (chemShare < 0.001
+        ? `With these chemistry choices even the hardest and slowest stages cost very little: all the chemistry takes less than 0.1% of one run. So the run, and the room for tries, is set by the wait for the setting to appear and by the biology after it. That is why changing one chemical step, for example a shortcut for the carbon step, does not move the tries here. Choose "Hard" chemistry above to see the stages matter.`
+        : `Here the chemistry takes up to ${esc((100 * chemShare).toFixed(chemShare < 0.1 ? 1 : 0))}% of one run, so the hardest and slowest stages do change the room for tries. A shortcut helps only when it acts on the hardest or slowest stage.`);
+  }
+  function renderStageWhy(both) {
+    if (!$("#tblStageWhy")) return;
+    const M = ctx.MODEL();
+    const E = both.E, Mr = both.Mr;
+    const fm = (x) => esc(fmtMyr(x));
+    const rows = M.scenarios.map((sc, i) => {
+      const rE = E.results[i], rM = Mr.results[i];
+      const W = planetWhy(rE, E.env, E.P, rM, Mr.env, Mr.P);
+      const sE = stageSummary(rE, humanTime), sM = stageSummary(rM, humanTime);
+      const pair = (e, m) => `${fm(e)} <span class="muted">to</span> <span class="mars-ink">${fm(m)}</span>`;
+    const SPM = typeof secPerMyr === "function" ? secPerMyr() : secPerMyr;
+    const pairT = (e, m) => (Math.max(e, m) < 0.01 ? `${esc(humanTime(e * SPM))} <span class="muted">to</span> <span class="mars-ink">${esc(humanTime(m * SPM))}</span>` : pair(e, m));
+      const more = W.tM > W.tE * 1.005 ? "more" : W.tM < W.tE * 0.995 ? "fewer" : "about the same";
+      let why = more === "about the same" ? "Mars gives about the same room for tries. " : `Mars gives ${more} tries mainly because `;
+      if (more !== "about the same") {
+        const winEffect = W.dWin, mainEffect = W.main.d;
+        why += Math.abs(winEffect) >= Math.abs(mainEffect)
+          ? `the window is ${winEffect > 0 ? "longer" : "shorter"} (${fm(E.env.budgetMyr)} to ${fm(Mr.env.budgetMyr)} Myr). `
+          : `${W.main.label} takes ${mainEffect > 0 ? "longer" : "less time"} (${fm(W.main.e)} to ${fm(W.main.m)} Myr). `;
+      }
+      if (sE.hardest.id !== sM.hardest.id) why += `The hardest stage changes from ${sE.hardest.label} on Earth to ${sM.hardest.label} on Mars. `;
+      else if (Math.abs(Math.log10(Math.max(1e-300, sM.hardest.p) / Math.max(1e-300, sE.hardest.p))) > 0.01) why += `The hardest stage, ${sE.hardest.label}, has a chance per try of ${sE.hardest.pTxt} on Earth and ${sM.hardest.pTxt} on Mars. `;
+      if (W.main.key === "chem" && more !== "about the same") {
+        const fx = (x) => (x >= 10 ? Math.round(x).toLocaleString("en-GB") : x.toFixed(1));
+        const fac = (ratio, up, down) => (ratio > 1.05 ? `${fx(ratio)} times ${up}` : ratio < 0.95 ? `${fx(1 / ratio)} times ${down}` : "about the same");
+        const needR = rE.pJoint / Math.max(1e-300, rM.pJoint), cycR = rM.tCycleS / Math.max(1e-30, rE.tCycleS), siteR = (rM.nSites || 1) / Math.max(1e-30, rE.nSites || 1);
+        why += `The wait for every stage to pass in one place is the tries needed, times the time between tries (${rE.cycleName}), divided by the number of places trying at once. On Mars: tries needed ${fac(needR, "more", "fewer")}${needR < 0.95 && sM.hardest.p > sE.hardest.p ? ` (the hardest stage passes more often${(Mr.P.feedP > 1 || Mr.P.feedFe > 1) ? ", helped by the richer iron and phosphate feed" : ""})` : needR > 1.05 ? ` (colder chemistry at ${Mr.P.chemTempC} degrees C shifts how long molecules form against how long they last)` : ""}; time between tries ${fac(cycR, "longer", "shorter")}; places trying at once ${fac(siteR, "more", "fewer")}.`;
+      }
+      return { cells: [esc(`${i + 1}. ${sc.name}`), `<strong class="num">${esc(fmtTries(W.tE))}</strong> <span class="muted">to</span> <strong class="num mars-ink">${esc(fmtTries(W.tM))}</strong>`, pair(E.env.budgetMyr, Mr.env.budgetMyr), pairT(rE.t1, rM.t1), pairT(rE.t2 + rE.t3, rM.t2 + rM.t3), pair(rE.t4 + rE.t5, rM.t4 + rM.t5), `<span class="stage-cell">${esc(why.trim())}</span>`] };
+    });
+    ctx.table($("#tblStageWhy"), ["Setting", { label: "Room for tries, Earth to Mars", n: true }, { label: "Window (Myr)", n: true }, { label: "Setting appears", n: true }, { label: "Chemistry S1 to S5", n: true }, { label: "Biology after (Myr)", n: true }, "Main reason"], rows);
+    $("#stageWhyRead").innerHTML = `Each pair reads Earth to <span class="mars-ink">Mars</span>. The Mars stages are run at ${esc(String(Mr.P.chemTempC))} degrees C, with ${esc(String(Mr.P.feedFe))} times the iron and ${esc(String(Mr.P.feedP))} times the phosphate feed (Mars basalt is richer in iron), and with the Mars windows and settings described above. Change the chemistry above to see how the reasons shift.`;
+  }
+
   function render(env, results) {
+    renderPlanet(env, results);
     renderStart(env, results);
+    const both = renderCompare();
+    renderBrakes(env, results, both);
     renderStory(env, results);
     renderPP();
     renderMap(env);

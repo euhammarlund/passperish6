@@ -13,10 +13,15 @@ import {
 import { createGuided } from "./guided.js";
 import { createSupply } from "./supply.js";
 import { createV8 } from "./v8.js";
+import { PLANETS, PLANET_KEYS, planetDefaults, planetModel } from "./planet.js";
+import { triesExact } from "./brakes.js";
 
 /* ---------------- state ---------------- */
 
 let MODEL = null;
+let EARTH = null; // the Earth scenario and cycle lists, kept so that a planet can be built from them
+const PLANET_SNAP = {}; // planet values the user set, kept while the other planet is shown
+let TRIES_REF = null; // the room for tries that the strip compares against
 let P = defaultParams();
 const FIGS = {};
 const SEL = { scenario: 0, handoff: null, element: null, presClass: null, refFilter: "all", refSearch: "", mineral: "smectite" };
@@ -1149,8 +1154,9 @@ function importJson(file) {
     const notes = [];
     if (obj.parameters) {
       Object.assign(P, obj.parameters);
-      P.nearOptions = P.nearOptions || defaultParams().nearOptions;
-      P.farOptions = P.farOptions || defaultParams().farOptions;
+      P.planet = PLANETS[P.planet] ? P.planet : "earth";
+      { const pl = PLANETS[P.planet]; P.nearOptions = pl.nearOptions || defaultParams().nearOptions; P.farOptions = pl.farOptions || defaultParams().farOptions;
+        const pm = planetModel(EARTH, P.planet); MODEL.scenarios = pm.scenarios; MODEL.cycles = pm.cycles; buildEnvelopeStatics(); }
       notes.push("Loaded a saved run and applied every parameter in it.");
       rebuildAllControls();
     }
@@ -1210,6 +1216,87 @@ function segSet(sel, v) {
   if (root) root.querySelectorAll("button").forEach((b) => b.setAttribute("aria-pressed", String(b.dataset.v === v)));
 }
 
+/* ---------------- version 9: planets ---------------- */
+
+function pickKeys(o) { const out = {}; for (const k of PLANET_KEYS) out[k] = o[k]; return out; }
+// Parameters for a planet: the current settings with that planet's own values. Pure, does not touch P.
+function paramsForPlanet(id) {
+  if (id === P.planet) return P;
+  const d = defaultParams();
+  const own = PLANET_SNAP[id] || pickKeys(planetDefaults(id, d));
+  const pl = PLANETS[id];
+  return { ...P, ...own, planet: id, nearOptions: pl.nearOptions || d.nearOptions, farOptions: pl.farOptions || d.farOptions };
+}
+// Runs the six settings on a planet without switching to it.
+function planetRun(id) {
+  const q = { ...paramsForPlanet(id) };
+  const pm = planetModel(EARTH, id);
+  const M2 = { ...MODEL, scenarios: pm.scenarios, cycles: pm.cycles };
+  const env = computeEnvelope(q);
+  q.effectiveTempC = env.workingTempC;
+  return { env, P: q, MODEL: M2, results: M2.scenarios.map((sc) => auditScenario(sc, q, M2)) };
+}
+function setPlanet(id) {
+  if (!PLANETS[id] || id === P.planet) return;
+  PLANET_SNAP[P.planet] = pickKeys(P);
+  const q = paramsForPlanet(id);
+  for (const k of [...PLANET_KEYS, "planet", "nearOptions", "farOptions"]) P[k] = q[k];
+  const pm = planetModel(EARTH, id);
+  MODEL.scenarios = pm.scenarios; MODEL.cycles = pm.cycles;
+  if (P.nearMode === "build" && id !== "earth") P.nearMode = "event";
+  buildEnvelopeStatics();
+  rebuildAllControls();
+  TRIES_REF = null;
+  recompute();
+  toast(`Now showing ${PLANETS[id].label}`);
+}
+
+/* ---------------- version 9: room for tries on every page ---------------- */
+
+function fmtTries(t) { return t >= 100 ? String(Math.round(t)) : t.toFixed(1); }
+let TRIES_PREV = null;
+function paramSig() { const { effectiveTempC, uiMode, ...rest } = P; return JSON.stringify(rest); }
+function renderTriesStrip(env, results) {
+  const el = $("#triesStrip");
+  if (!el) return;
+  const now = results.map((r) => (env.valid ? triesExact(r, env.budgetMyr, P) : 0));
+  if (!TRIES_REF || TRIES_REF.n !== now.length || TRIES_REF.planet !== P.planet) TRIES_REF = { n: now.length, planet: P.planet, v: now.slice(), label: "when this page was opened or the planet changed" };
+  const sig = paramSig();
+  const changed = TRIES_PREV && TRIES_PREV.sig !== sig && TRIES_PREV.planet === P.planet;
+  const moved = changed ? now.some((x, i) => Math.abs(x - TRIES_PREV.v[i]) >= 0.005) : true;
+  TRIES_PREV = { sig, v: now.slice(), planet: P.planet };
+  const fmtD = (d) => { const a = Math.abs(d); if (a < 0.005) return "no change"; return (d > 0 ? "+" : "-") + (a < 0.05 ? a.toFixed(2) : fmtTries(a)); };
+  const cells = results.map((r, i) => {
+    const d = now[i] - TRIES_REF.v[i];
+    const dTxt = fmtD(d);
+    const cls = Math.abs(d) < 0.005 ? "same" : d > 0 ? "up" : "down";
+    const fits = r.total <= env.budgetMyr;
+    const chem = r.t2 + r.t3, bio = r.t4 + r.t5, tot = Math.max(1e-12, r.total);
+    const pc = (x) => Math.max(0, Math.min(100, (100 * x) / tot));
+    const share = (x) => { const v = pc(x); return v < 0.1 && x > 0 ? "under 0.1%" : v.toFixed(v < 10 ? 1 : 0) + "%"; };
+    const why = `One run: ${share(r.t1)} waiting for the setting to appear, ${share(chem)} chemistry (S1 to S5), ${share(bio)} copying with selection and building LUCA's community.`;
+    return `<div class="ts-cell${fits ? "" : " nofit"}" title="${esc(r.scenario.name)}: room for ${fmtTries(now[i])} tries (whole tries: ${Math.floor(now[i])}). ${fits ? "" : "One run does not fit in the window. "}Change since the reference: ${dTxt}. ${why}">
+      <span class="ts-n">${i + 1}</span><span class="ts-name">${esc(SHORT_NAMES[r.scenario.id] || r.scenario.name)}</span>
+      <strong class="ts-v num">${fmtTries(now[i])}</strong><span class="ts-d ${cls}">${dTxt}</span>
+      <span class="ts-bar" aria-hidden="true"><i class="tb-a" style="width:${pc(r.t1)}%"></i><i class="tb-c" style="width:${Math.max(pc(chem), chem > 0 ? 0.6 : 0)}%"></i><i class="tb-b" style="width:${pc(bio)}%"></i></span></div>`;
+  }).join("");
+  // When a setting was changed but no tries moved, say why.
+  let note = "";
+  if (changed && !moved) {
+    const chemMax = Math.max(...results.map((r) => (r.t2 + r.t3) / Math.max(1e-12, r.total)));
+    note = chemMax < 0.001
+      ? `Your last change did not move the tries. In every setting the chemistry (S1 to S5) takes less than 0.1% of one run; the tries are set by the wait for the setting to appear and by building LUCA's community (see the small bars). A chemistry change, such as a shortcut for one step, only shows when that step is slow or unlikely: choose "Hard" chemistry on page 1, then try again. Box 8 on page 1 shows the hardest stage in each setting.`
+      : `Your last change did not move the tries: it acts on a step that is not what holds these settings back, or on settings that do not use it. Box 8 on page 1 shows the hardest and slowest stage in each setting.`;
+    if (P.planet !== "earth") note += " The start-and-supply page and the timeline still describe Earth, so changes there do not apply to Mars.";
+  }
+  el.innerHTML = `<div class="ts-head"><span class="ts-title">Room for tries</span><span class="ts-planet">${esc(PLANETS[P.planet].label)}, ${esc(fmtMyr(env.budgetMyr))} Myr window</span>
+    <span class="ts-legend"><i class="tb-a"></i>setting appears <i class="tb-c"></i>chemistry <i class="tb-b"></i>biology</span>
+    <button class="linkbtn" id="tsSetRef" title="Compare later changes with the values shown now">Compare from here</button></div>
+    <div class="ts-cells">${cells}</div>${note ? `<div class="ts-note">${esc(note)}</div>` : ""}`;
+  $("#tsSetRef").onclick = () => { TRIES_REF = { n: now.length, planet: P.planet, v: now.slice(), label: "set by you" }; TRIES_PREV = null; renderTriesStrip(env, results); toast("Changes are now counted from here"); };
+}
+const SHORT_NAMES = { SC1: "Alkaline vent", SC2: "Wet and dry pools", SC3: "Impact hydrothermal", SC4: "Pumice raft", SC5: "Ice brine veins", SC6: "Panspermia" };
+
 function recompute() {
   const env = computeEnvelope(P);
   P.effectiveTempC = env.workingTempC;
@@ -1234,6 +1321,10 @@ function recompute() {
   GUIDED.render(env, results);
   SUPPLY.render(env, results);
   V8.render(env, results);
+  renderTriesStrip(env, results);
+  document.body.dataset.planet = P.planet;
+  const pb = $("#planetBanner");
+  if (pb) pb.hidden = P.planet === "earth";
 }
 
 let LAST_ENV = null;
@@ -1242,6 +1333,7 @@ const GUIDED = createGuided({
   sliderFor: (k) => sliderFor(k), wireParamInputs: (r) => wireParamInputs(r), toast: (m) => toast(m),
   setFig: (n, s, sel) => setFig(n, s, sel), figW: (w) => figW(w), table: (el, h, r, o) => table(el, h, r, o),
   lastEnv: () => LAST_ENV, showView: (v) => showView(v),
+  setPlanet: (id) => setPlanet(id), planetRun: (id) => planetRun(id),
 });
 
 const SUPPLY = createSupply({
@@ -1283,6 +1375,7 @@ function wireTabs() {
 async function boot() {
   const res = await fetch("data/model.json");
   MODEL = await res.json();
+  EARTH = { scenarios: MODEL.scenarios, cycles: MODEL.cycles };
   SEL.handoff = MODEL.handoffs[0].id;
   SEL.element = "Fe";
   SEL.presClass = MODEL.preservation.molecule_classes[0].name;

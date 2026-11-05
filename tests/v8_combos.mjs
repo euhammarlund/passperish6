@@ -17,5 +17,5 @@ for (const c of combos) {
   const res = M.scenarios.map((sc) => E.auditScenario(sc, p, M));
   const bad = res.filter((r) => !isFinite(r.total) && r.total !== Infinity || Number.isNaN(r.total));
   const h = H.hypoScenarios(M, p, res);
-  console.log(JSON.stringify(c).slice(0, 90).padEnd(92), res.map((r) => r.total.toFixed(2)).join(" "), "| SC7", h.best.total.toFixed(2), "SC8", h.inv.total.toFixed(2), "top", h.levers.top.map((t) => t ? t.id + ":" + t.saved.toFixed(2) : "-").join(","), bad.length ? "NAN!" : "");
+  console.log(JSON.stringify(c).slice(0, 90).padEnd(92), res.map((r) => r.total.toFixed(2)).join(" "), "| SC7", h.best.total.toFixed(2), bad.length ? "NAN!" : "");
 }

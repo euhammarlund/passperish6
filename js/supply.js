@@ -150,7 +150,14 @@ export function createSupply(ctx) {
   function build() {
     segWire("#supStartSeg", (v) => { P().nearMode = v === "build" ? "build" : "event"; ctx.recompute(); ctx.toast(v === "build" ? "The start is now built from accretion and volatiles" : "The start is a named event again"); });
     segBtns("#supPathSeg", Object.entries(ACCRETION_PATHS).map(([k, a]) => ({ v: k, label: a.label })), P().accretionPath);
-    segWire("#supPathSeg", (v) => { P().accretionPath = v; ctx.recompute(); });
+    segWire("#supPathSeg", (v) => {
+      const p = P(); p.accretionPath = v;
+      // The growth path only moves the start when the start is built from accretion, so picking a path
+      // switches the start to "built" (on Earth; this page describes Earth).
+      if (p.planet && p.planet !== "earth") { ctx.recompute(); ctx.toast("This page describes Earth. Switch to Earth to use the growth path."); return; }
+      if (p.nearMode !== "build") { p.nearMode = "build"; ctx.recompute(); ctx.toast("The start is now built from accretion, so the growth path can move it"); return; }
+      ctx.recompute();
+    });
     segBtns("#supMoonSeg", MOON_PRESETS, P().moonAgeGa);
     segWire("#supMoonSeg", (v) => { P().moonAgeGa = parseFloat(v); ctx.rebuild(); ctx.recompute(); });
     segBtns("#supSolidSeg", SOLID_PRESETS, P().solidifyMyr);
@@ -179,7 +186,7 @@ export function createSupply(ctx) {
     segWire("#supDelSeg", (v) => { P().deliverySource = v; P().deliveryCovers = null; if (v === "comet" && P().deliveryWindowYr < 1000) { /* keep the window; comet HCN changes access only */ } ctx.recompute(); });
     segWire("#supDelWhereSeg", (v) => { P().deliveryWhere = v; ctx.recompute(); });
     segWire("#supDelBlockSeg", (v) => { P().deliveryBlocked = v; ctx.recompute(); });
-    $("#supDelFields").innerHTML = ["deliveryRatePerMyr", "deliveryWindowYr"].map((k) => ctx.sliderFor(k)).join("");
+    $("#supDelFields").innerHTML = ["deliveryShare", "deliveryRatePerMyr", "deliveryWindowYr"].map((k) => ctx.sliderFor(k)).join("");
     ctx.wireParamInputs($("#supDelFields"));
 
     $("#supExplain").innerHTML = `
@@ -223,6 +230,7 @@ export function createSupply(ctx) {
     return { env, res: M().scenarios.map((sc) => auditScenario(sc, P2, M())) };
   }
 
+  const isBuildNow = (p) => p.nearMode === "build";
   function render(env, results) {
     const p = P();
     // 1. start
@@ -232,7 +240,9 @@ export function createSupply(ctx) {
     $("#supBuild").style.opacity = isBuild ? "1" : "0.55";
     const b = buildStart(p);
     const path = ACCRETION_PATHS[p.accretionPath];
-    $("#supPathRead").innerHTML = esc(path.plain) + (path.keeps ? "" : ` Re-supply wait for ${Math.round(p.lateShare * 100)} per cent of late accretion: ${fmtMyr(resupplyMyr(p.lateShare))} Myr.`);
+    $("#supPathRead").innerHTML = esc(path.plain) + (path.keeps ? "" : ` Re-supply wait for ${Math.round(p.lateShare * 100)} per cent of late accretion: ${fmtMyr(resupplyMyr(p.lateShare))} Myr.`)
+      + (b.limiting === "drawdown" ? ` <strong>Why the paths can give the same start:</strong> the start waits for the later of two clocks, CO2 taken back into rock (${fmtMyr(b.draw)} Myr) and re-supply of volatiles (${fmtMyr(b.resup)} Myr with this path). Here the CO2 clock is the longer one, so the growth path does not move the start. Raise the share of late accretion needed, or shorten the CO2 wait, to see the paths differ.` : "")
+      + (isBuildNow(p) ? "" : ` <span class="warn-inline">The start is a named event now, so the growth path does not change the window. Picking a path switches the start to "built".</span>`);
     const ls = $("#supFields [data-pkey=lateShare]"); if (ls) ls.style.display = path.keeps ? "none" : "";
     const kp = (k, v, n) => `<div class="kpi"><span class="k">${esc(k)}</span><span class="v">${esc(v)}</span>${n ? `<span class="n">${esc(n)}</span>` : ""}</div>`;
     $("#supKpis").innerHTML = [
@@ -302,7 +312,7 @@ export function createSupply(ctx) {
         const r = results[i], d = r.delivery, r0 = vNone.res[i];
         const on = d && d.on;
         return { cells: [`<strong>${esc(sc.name)}</strong>`, (d && d.receives ? "yes" : "no") + `<br><span class="hint">${esc(sc.delivery_note || "")}</span>`,
-          on ? `<span class="num">${esc(pct(d.perDelivery))}</span><br><span class="hint">${fmtSci(d.triesPerDelivery)} tries each</span>` : "none",
+          on ? (d.flux ? `<span class="num">${esc(pct(d.fShare))}</span><br><span class="hint">of all tries find the dust organics</span>` : `<span class="num">${esc(pct(d.perDelivery))}</span><br><span class="hint">${fmtSci(d.triesPerDelivery)} tries each</span>`) : "none",
           on ? (d.blocked ? "always: they cannot be made in place" : `<span class="num">${esc(d.breakEven >= 1 ? "any chance" : "1 in " + fmtSci(1 / Math.max(d.breakEven, 1e-300)))}</span><br><span class="hint">now ${esc(pct(d.pCovered))}</span>`) : "none",
           `<span class="num">${esc(ht(r0.t3))}</span><br>to <span class="num">${esc(ht(r.t3))}</span>`,
           on ? (d.viaDelivery ? "delivered" : "made in place") + `<br><span class="hint">delivery share ${Math.round(d.share * 100)} per cent</span>` : "made in place",
@@ -312,6 +322,8 @@ export function createSupply(ctx) {
       ? "No delivery is on, so every setting makes everything in place. Pick a source above to add the second route."
       : p.deliverySource === "comet"
         ? "Comet HCN covers no rate-limited step in this model: it changes whether nitrogen is there at all (S0), so the totals do not move. Its value is in settings where HCN would otherwise be missing, which the model does not yet count."
+        : src.mode === "flux"
+        ? `Each cell shows the value with no delivery, then "to" the value with the dust rain. A share of ${pct(p.deliveryShare)} of the tries at each receiving site skips S4, the carbon step. This only shows in the tries when S4 is slow or unlikely in place, which it is with the hard chemistry on page 1 (CO2 with no catalyst). With the default chemistry, CO2 on an iron sulfide surface already passes almost every time in about a second, so there is nothing for the shortcut to save. Choose "Everywhere" to let every setting receive the dust.`
         : `Each cell shows the value with no delivery, then "to" the value with this delivery. Deliveries are rare: ${p.deliveryRatePerMyr} per Myr, against the very many tries a setting gets when it makes things in place. So delivery wins only where the covered steps are close to impossible in place, below the break-even chance in the table, or cannot happen in place at all. ${p.deliveryBlocked === "yes" ? "Here they cannot, so delivery is the only route and its rate sets T3." : "Choose \"only by delivery\" to see that case."} With ${fmtSci(p.successesNeeded)} successes needed, a route that delivers ${p.deliveryRatePerMyr} per Myr needs at least ${cellMyr(p.successesNeeded / p.deliveryRatePerMyr)} Myr.`;
   }
   return { build, render };
