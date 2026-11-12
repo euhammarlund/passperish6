@@ -568,3 +568,9 @@ th.mars-col { color: var(--mars-ink); }
 .rs-tag.term { background: #f4efe3; color: #5c4a1e; border-color: #e2d6b8; }
 .map-tbl tr.offpage td { color: var(--muted, #6e6b63); font-style: italic; }
 .map-tbl td .rs-tag { white-space: normal; }
+
+/* v9.4 intro links in the masthead */
+.intro-links { display: flex; gap: 6px; margin-left: auto; margin-right: 4px; }
+.intro-links a { display: inline-flex; align-items: center; gap: 6px; padding: 6px 10px; border: 1px solid var(--line, #d9d6cf); border-radius: 999px; font-size: 12.5px; color: var(--dark-teal); text-decoration: none; background: transparent; }
+.intro-links a:hover { background: rgba(15,76,82,0.07); }
+@media (max-width: 760px) { .intro-links { margin-left: 0; } .intro-links span { display: none; } .intro-links a { padding: 6px; } }
