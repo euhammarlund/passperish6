@@ -1285,7 +1285,7 @@ function renderTriesStrip(env, results) {
   if (changed && !moved) {
     const chemMax = Math.max(...results.map((r) => (r.t2 + r.t3) / Math.max(1e-12, r.total)));
     note = chemMax < 0.001
-      ? `Your last change did not move the tries. In every setting the chemistry (S1 to S5) takes less than 0.1% of one run; the tries are set by the wait for the setting to appear and by building LUCA's community (see the small bars). A chemistry change, such as a shortcut for one step, only shows when that step is slow or unlikely: choose "Hard" chemistry on page 1, then try again. Box 8 on page 1 shows the hardest stage in each setting.`
+      ? `Your last change did not move the tries. In every setting the chemistry (S1 to S5) takes less than 0.1% of one run; the tries are set by the wait for the setting to appear and by building LUCA's community (see the small bars). A chemistry change, such as a shortcut for one step, only shows when that step is slow or unlikely: choose "Hard" chemistry on page 1, then try again. Box 8 on page 1 shows the hardest stage in each setting. On page 2, Follow one setting, the panel "What your change did to this setting" shows where the change landed.`
       : `Your last change did not move the tries: it acts on a step that is not what holds these settings back, or on settings that do not use it. Box 8 on page 1 shows the hardest and slowest stage in each setting.`;
     if (P.planet !== "earth") note += " The start-and-supply page and the timeline still describe Earth, so changes there do not apply to Mars.";
   }

@@ -2,7 +2,7 @@
 // here comes from the same audit as the full workbench, so the two never disagree.
 
 import {
-  auditScenario, verdictAgainstBudget, handoffState, computeT5, timeLeft, cycleSweep, cycleCurrency, CURRENCY_SOURCES, geomean,
+  auditScenario, computeEnvelope, verdictAgainstBudget, handoffState, computeT5, timeLeft, cycleSweep, cycleCurrency, CURRENCY_SOURCES, geomean,
   fmtSci, fmtMyr, fmtMyr as fmtMyrBase, secPerYr, secPerMyr,
 } from "./engine.js";
 import { defaultParams, SPEC } from "./params.js";
@@ -571,19 +571,26 @@ export function createGuided(ctx) {
 
   function pillFor(kind, txt) { return `<span class="pill ${kind}">${esc(txt)}</span>`; }
 
+  // The chemistry of S5 is a rung like S1 to S4 and is counted in T2 and T3; step 7 shows the slow biology (T4).
+  function s5chem(r) {
+    const g = r.rungs.find((x) => x.rung === "S5");
+    if (!g || !g.handoff) return "";
+    return ` The chemistry of this stage, <strong>${esc(g.handoff.species_and_handoff)}</strong> (${esc(g.handoff.id)}), forms in ${humanTime(g.tauTransfer)} and survives ${humanTime(g.tauLoss)}. It is counted with steps 2 to 5 in the chemistry (T2) and in the wait for luck (T3, step 6). What this step adds is the slow biology that follows (T4), which temperature does not change in this model.`;
+  }
+
   function stepInfo(r, env, P) {
     const M = ctx.MODEL();
     const sc = r.scenario, story = STORY[sc.id] || STORY.SC1;
     const out = [];
     const t1c = sc.requires_subaerial_land || sc.is_cold || sc.id === "SC6" ? [1, "Whether this kind of place existed early is contested"] : [2, "This kind of place exists as soon as there is an ocean; the waiting time is order of magnitude"];
-    out.push({ id: "T1", title: "A setting appears", pill: ["na", "time, not tries"], time: r.t1, conf: t1c,
-      body: `${story.short} The model first waits for this kind of place to exist: ${fmtMyr(r.t1)} Myr${sc.requires_subaerial_land ? ", which includes extra waiting because it needs dry land above the sea" : ""}.`,
+    out.push({ id: "T1", lad: "S0 assumed", term: "T1", title: "A setting appears", pill: ["na", "time, not tries"], time: r.t1, conf: t1c,
+      body: `${story.short} The model first waits for this kind of place to exist: ${fmtMyr(r.t1)} Myr${sc.requires_subaerial_land ? ", which includes extra waiting because it needs dry land above the sea" : ""}. S0, getting the element into water, is assumed to be met here: the model does not time it (see Start and supply, and Ladder and elements in the full workbench).`,
       chart: timeMini(r.t1 * 1e6 * S_YR, env.budgetMyr) });
     for (const rid of ["S1", "S2", "S3", "S4"]) {
       const g = r.rungs.find((x) => x.rung === rid);
       const plain = RUNG_PLAIN[rid];
-      if (!g) { out.push({ id: rid, title: plain.title, conf: [1, "Switched off"], pill: ["na", "switched off"], body: "This step is switched off in the full workbench, so it is skipped here.", chart: "" }); continue; }
-      if (!g.handoff) { out.push({ id: rid, title: plain.title, conf: [1, "No molecule assigned, so passing is assumed"], pill: ["e", "about 1"], body: plain.what + " No molecule is assigned to this step, so it always passes.", chart: "" }); continue; }
+      if (!g) { out.push({ id: rid, lad: rid, term: "T2", title: plain.title, conf: [1, "Switched off"], pill: ["na", "switched off"], body: "This step is switched off in the full workbench, so it is skipped here.", chart: "" }); continue; }
+      if (!g.handoff) { out.push({ id: rid, lad: rid, term: "T2", title: plain.title, conf: [1, "No molecule assigned, so passing is assumed"], pill: ["e", "about 1"], body: plain.what + " No molecule is assigned to this step, so it always passes.", chart: "" }); continue; }
       const surfHelp = g.surface && g.surface.applied && g.pNoSurface < 0.5 && g.p >= 0.5;
       const pill = g.p >= 0.5 ? (surfHelp ? ["m", "about 1, on a surface"] : ["e", "about 1"]) : ["h", "about " + fmtSci(1 / g.p, 1)];
       const surfTxt = g.surface && g.surface.applied && pctText(g.p) !== pctText(g.pNoSurface)
@@ -593,19 +600,19 @@ export function createGuided(ctx) {
       const minT = surfUsed && r.surface && r.surface.mineral ? tierStars(r.surface.mineral.tier) : 3;
       const cN = Math.min(hN, minT);
       const cWhy = `The rates for ${g.handoff.id} are ${g.handoff.tier}` + (surfUsed ? `; the surface (${r.surface.mineral.name}) is Tier ${r.surface.mineral.tier}` : "");
-      out.push({ id: rid, title: plain.title, pill, time: g.tauTransfer / (1e6 * S_YR), conf: [cN, cWhy],
+      out.push({ id: rid, lad: rid, term: "T2", title: plain.title, pill, time: g.tauTransfer / (1e6 * S_YR), conf: [cN, cWhy],
         body: `${plain.what} In this setting it happens ${esc(story.where[rid] || "")}. The model's named molecule for this step is <strong>${esc(g.handoff.species_and_handoff)}</strong> (${esc(g.handoff.id)}, the same in every setting; change it in the full workbench). It forms in ${humanTime(g.tauTransfer)} and survives ${humanTime(g.tauLoss)}, so the chance it is passed on is ${pctText(g.p)}.${surfTxt}`,
         chart: raceMini(g.tauTransfer, g.tauLoss) });
     }
     const pj = r.pJoint;
-    out.push({ id: "T3", title: "Waiting for it all in one place", conf: [1, "The number of places working at once is a judgement, and the cycle choice too"], pill: pj >= 0.5 ? ["e", "about 1"] : ["h", "about " + fmtSci(1 / pj, 1)], time: r.t3,
+    out.push({ id: "T3", lad: "S1 to S5", term: "T3", title: "Waiting for it all in one place", conf: [1, "The number of places working at once is a judgement, and the cycle choice too"], pill: pj >= 0.5 ? ["e", "about 1"] : ["h", "about " + fmtSci(1 / pj, 1)], time: r.t3,
       body: `Every step has to succeed in the same place, in the same round. Together the chance per round is ${pctText(pj)}. There are about ${fmtSci(r.nSites, 1)} places working at once, each trying once per ${esc(r.cycleName.toLowerCase())} cycle (${humanTime(r.tCycleS)}), and ${cnt(P.successesNeeded)} success${P.successesNeeded === 1 ? " is" : "es are"} needed. The wait is ${humanTime(r.t3 * 1e6 * S_YR)}.`,
       chart: timeMini(r.t3 * 1e6 * S_YR, env.budgetMyr) });
-    out.push({ id: "S5", title: "Copying with selection", conf: [2, "Standard population genetics; the generation time and population size are order of magnitude"], pill: ["na", "time, not tries"], time: r.t4,
-      body: `A membrane wraps a working network: a protocell. Copies that copy better spread. This is slow: ${fmtMyr(r.t4detail.errorMyr)} Myr to copy without losing the message, then ${fmtMyr(r.t4detail.fixMyr)} Myr for a better version to take over a population of ${fmtSci(P.popSize, 1)}. Together ${fmtMyr(r.t4)} Myr.`,
+    out.push({ id: "S5", lad: "S5", term: "T4", title: "Copying with selection", conf: [2, "Standard population genetics; the generation time and population size are order of magnitude"], pill: ["na", "time, not tries"], time: r.t4,
+      body: `A membrane wraps a working network: a protocell. Copies that copy better spread. This is slow: ${fmtMyr(r.t4detail.errorMyr)} Myr to copy without losing the message, then ${fmtMyr(r.t4detail.fixMyr)} Myr for a better version to take over a population of ${fmtSci(P.popSize, 1)}. Together ${fmtMyr(r.t4)} Myr.${s5chem(r)}`,
       chart: timeMini(r.t4 * 1e6 * S_YR, env.budgetMyr) });
     const t5 = r.t5detail;
-    out.push({ id: "E", title: "Growing LUCA's community", conf: [1, "The split rate is anchored on modern bacteria, the link rate and the community size are judgements"], pill: ["na", "time, not tries"], time: r.t5,
+    out.push({ id: "E", lad: "after S5", term: "T5", title: "Growing LUCA's community", conf: [1, "The split rate is anchored on modern bacteria, the link rate and the community size are judgements"], pill: ["na", "time, not tries"], time: r.t5,
       body: !t5.on ? "The ecosystem step is switched off, so the audit stops at the first population of cells." :
         t5.direct ? `The time to build the community is set directly to ${fmtMyr(r.t5)} Myr.` :
         `LUCA lived in a community (Moody et al. 2024). Growing from one kind of cell to ${t5.X} kinds takes about ${fmtMyr(t5.tDiv)} Myr. Making ${t5.Y} of the ${t5.pairs} possible partnerships takes about ${fmtMyr(t5.tInt)} Myr. ${t5.overlap ? "Both happen at the same time, so the longer counts" : "One follows the other, so both count"}: ${fmtMyr(r.t5)} Myr.`,
@@ -618,7 +625,7 @@ export function createGuided(ctx) {
     const big = Object.keys(termConf).filter((k) => (r.terms[k] || 0) >= 0.1 * r.total);
     const totC = Math.min(...(big.length ? big : Object.keys(termConf)).map((k) => termConf[k]));
     const TERM_WORD = { T1: "waiting for the setting", T2: "the chemistry", T3: "waiting for luck", T4: "slow biology", T5: "the ecosystem" };
-    out.push({ id: "L", title: "LUCA, and the time left", conf: [totC, "The total is only as firm as the weakest term that makes up a real share of it, here " + big.map((k) => TERM_WORD[k]).join(" and ")], pill: tl.remaining >= 0 ? ["e", cnt(tl.tries) + " tries fit"] : ["h", "does not fit"], time: r.total,
+    out.push({ id: "L", lad: "LUCA", term: "T1 to T5", title: "LUCA, and the time left", conf: [totC, "The total is only as firm as the weakest term that makes up a real share of it, here " + big.map((k) => TERM_WORD[k]).join(" and ")], pill: tl.remaining >= 0 ? ["e", cnt(tl.tries) + " tries fit"] : ["h", "does not fit"], time: r.total,
       body: tl.remaining >= 0
         ? `All together the run needs ${fmtMyr(r.total)} Myr of a ${fmtMyr(env.budgetMyr)} Myr window, leaving ${fmtMyr(tl.remaining)} Myr. One full try takes ${fmtMyr(tl.run)} Myr, so the window has room for ${cnt(tl.tries)} tries: the one we descend from, and ${cnt(tl.stopped)} that could have reached the same point and then stopped. Chance it fits at all: ${pctText(tl.pFit)}.`
         : `All together the run needs ${fmtMyr(r.total)} Myr, which is ${fmtMyr(-tl.remaining)} Myr more than the ${fmtMyr(env.budgetMyr)} Myr window. Chance it fits by luck: ${pctText(tl.pFit)}.`,
@@ -775,13 +782,13 @@ export function createGuided(ctx) {
     $$("#storyScenarios .chip").forEach((b) => b.setAttribute("aria-pressed", String(+b.dataset.i === st.scenario)));
     const steps = stepInfo(r, env, P);
     $("#storyRoute").innerHTML = steps.map((s, i) => `<button class="route-step${i === st.step ? " on" : ""}" data-i="${i}">
-      <span class="rs-n">${i + 1}</span><span class="rs-t">${esc(s.title)}</span>${pillFor(s.pill[0], s.pill[1])}${s.conf ? starsHtml(s.conf[0], s.conf[1]) : ""}</button>`).join("");
+      <span class="rs-n">${i + 1}</span><span class="rs-t">${esc(s.title)}</span><span class="rs-tags"><span class="rs-tag lad" title="Ladder stage">${esc(s.lad || "")}</span><span class="rs-tag term" title="Time term">${esc(s.term || "")}</span></span>${pillFor(s.pill[0], s.pill[1])}${s.conf ? starsHtml(s.conf[0], s.conf[1]) : ""}</button>`).join("");
     $$("#storyRoute .route-step").forEach((b) => { b.onclick = () => { st.step = +b.dataset.i; ctx.recompute(); }; });
     const s = steps[st.step];
     const g2 = r.rungs.find((x) => x.rung === "S2");
     const t5 = r.t5detail;
     $("#storyScene").innerHTML = sceneSvg(r.scenario.id, { stepIdx: st.step, pS2: g2 ? g2.p : 1, X: t5.on ? t5.X : 1, Y: t5.on ? t5.Y : 0, pairs: t5.pairs });
-    $("#storyPanel").innerHTML = `<p class="eyebrow">Step ${st.step + 1} of ${steps.length}, ${esc(r.scenario.name)}</p>
+    $("#storyPanel").innerHTML = `<p class="eyebrow">Step ${st.step + 1} of ${steps.length}, ${esc(r.scenario.name)}. Ladder stage: ${esc(s.lad || "")}. Time term: ${esc(s.term || "")}</p>
       <h3 class="step-title">${esc(s.title)}</h3>
       <div class="step-pill">${pillFor(s.pill[0], s.pill[1])}${s.time != null ? `<span class="step-time">this step: <strong class="num">${esc(humanTime(s.time * 1e6 * S_YR))}</strong></span>` : ""}</div>
       <p>${s.body}</p>
@@ -790,7 +797,101 @@ export function createGuided(ctx) {
     $("#storyDots").innerHTML = steps.map((_, i) => `<span class="dot${i === st.step ? " on" : ""}${i < st.step ? " done" : ""}"></span>`).join("");
     $("#storyPrev").disabled = st.step === 0;
     $("#storyNext").disabled = st.step === steps.length - 1;
+    renderStoryMap(r);
+    renderStoryDelta(env, r, P);
   }
+
+  // How the nine steps of this page relate to the ladder (S0 to S6) and the time terms (T1 to T5).
+  function renderStoryMap(r) {
+    const el = $("#storyMap"); if (!el) return;
+    const rows = [
+      ["", "Getting the element into water", "S0", "not timed", "no", "Assumed met in every setting. Supply and delivery are on page 6, Start and supply."],
+      ["1", "A setting appears", "none, the place itself", "T1", "no", "Waiting for the kind of place to exist."],
+      ["2", "Sorting by energy", "S1", "T2", "yes", "Forming and lasting times of its named molecule."],
+      ["3", "Lasting long enough", "S2", "T2", "yes", "The same, plus the ribose step when it is on."],
+      ["4", "Gathering in one place", "S3", "T2", "yes", "The same, and the mineral surface acts here."],
+      ["5", "Making more of itself", "S4", "T2", "yes", "The same, and the mineral surface acts here."],
+      ["6", "Waiting for it all in one place", "S1 to S5 together", "T3", "yes, through the chance per try", "Every step must pass in the same place in the same round."],
+      ["7", "Copying with selection", "S5", "T2 and T3 for its chemistry, T4 for the biology", "chemistry yes, biology no", "Its named molecule is timed like steps 2 to 5. The slow biology is T4."],
+      ["8", "Growing LUCA's community", "after S5", "T5", "no", "Kinds of organisms and their links."],
+      ["9", "LUCA, and the time left", "LUCA", "T1 + T2 + T3 + T4 + T5", "only through T2 and T3", "One run against the window gives the room for tries."],
+      ["", "Preservation", "S6", "not in the audit", "no", "After LUCA: what the rocks can still show. Full workbench, page 7."],
+    ];
+    el.innerHTML = `<h2>How these 9 steps match S0 to S6 and T1 to T5</h2>
+      <p class="sub">The steps on this page follow one run in time order. The ladder (S0 to S6) names what the chemistry must achieve. The time terms (T1 to T5) say how long each part takes. The two lists overlap, but they are not the same list.</p>
+      <div class="tbl-wrap"><table class="data map-tbl"><thead><tr><th>Step here</th><th>What happens</th><th>Ladder stage</th><th>Time term</th><th>Does the chemistry temperature act here?</th><th>Note</th></tr></thead>
+      <tbody>${rows.map((x) => `<tr class="${x[0] ? "" : "offpage"}"><td class="num">${x[0] || "not a step here"}</td><td>${esc(x[1])}</td><td><span class="rs-tag lad">${esc(x[2])}</span></td><td><span class="rs-tag term">${esc(x[3])}</span></td><td>${esc(x[4])}</td><td>${esc(x[5])}</td></tr>`).join("")}</tbody></table></div>
+      <p class="hint" style="margin-top:8px">So the ladder stages S1 to S5 all sit inside one run, as chemistry (T2) and as the wait for luck (T3). S0 is assumed and S6 comes after LUCA, so neither adds time. Steps 1, 8 and 9 have no ladder stage of their own.</p>`;
+  }
+
+  // What a change made on this page (for example the temperature) did to this setting.
+  function snapP(P) { const q = JSON.parse(JSON.stringify(P)); q.coolingAnchors = P.coolingAnchors; q.nearOptions = P.nearOptions; q.farOptions = P.farOptions; return q; }
+  function renderStoryDelta(env, r, P) {
+    const el = $("#storyDelta"); if (!el) return;
+    if (!st.base || st.base.planet !== P.planet) st.base = snapP(P);
+    const B = snapP(st.base);
+    const envB = computeEnvelope(B); B.effectiveTempC = envB.workingTempC;
+    const rb = auditScenario(r.scenario, B, ctx.MODEL());
+    const tlB = timeLeft(rb, envB.budgetMyr, B), tlN = timeLeft(r, env.budgetMyr, P);
+    const trB = triesExact(rb, envB.budgetMyr, B), trN = triesExact(r, env.budgetMyr, P);
+    const skip = new Set(["effectiveTempC", "uiMode", "coolingAnchors", "nearOptions", "farOptions"]);
+    const diff = (k) => JSON.stringify(st.base[k]) !== JSON.stringify(P[k]);
+    const changed = Object.keys(SPEC).filter((k) => !skip.has(k) && diff(k));
+    const other = Object.keys(P).filter((k) => !SPEC[k] && !skip.has(k) && diff(k));
+    const ratio = (a, b) => { if (!(a > 0) || !(b > 0)) return a === b ? "same" : "n/a"; const q = b / a; if (Math.abs(Math.log10(q)) < 0.002) return "same"; return q >= 1 ? "x " + fmtSci(q, 2) : "/ " + fmtSci(1 / q, 2); };
+    const pTxt = (p) => (p >= 0.995 ? "about 1" : p >= 0.01 ? (p * 100).toFixed(1) + "%" : "1 in " + fmtSci(1 / p, 2));
+    const rowsHtml = [], geoF = [], geoL = [];
+    for (const g of r.rungs) {
+      const gb = rb.rungs.find((x) => x.rung === g.rung);
+      if (!gb || !g.handoff) continue;
+      if (g.tauTransfer > 0 && gb.tauTransfer > 0) geoF.push(g.tauTransfer / gb.tauTransfer);
+      if (g.tauLoss > 0 && gb.tauLoss > 0) geoL.push(g.tauLoss / gb.tauLoss);
+      const nm = (RUNG_PLAIN[g.rung] || {}).title || ({ S5: "Copying with selection, its molecule", S2r: "Ribose kept", S5b: "Build-up to a useful length" })[g.rung] || g.rungName;
+      rowsHtml.push(`<tr><td><span class="rs-tag lad">${esc(g.rung)}</span> ${esc(nm)}, ${esc(g.handoff.id)}</td>
+        <td class="num">${humanTime(gb.tauTransfer)} to ${humanTime(g.tauTransfer)}</td>
+        <td class="num">${gb.tauLoss ? humanTime(gb.tauLoss) : "n/a"} to ${g.tauLoss ? humanTime(g.tauLoss) : "n/a"}</td>
+        <td class="num">${pTxt(gb.p)} to ${pTxt(g.p)}</td></tr>`);
+    }
+    const sec = (myr) => humanTime(myr * 1e6 * S_YR);
+    const sumRows = [
+      ["Chemistry, T2 (steps 2 to 5 and the S5 molecule)", sec(rb.t2), sec(r.t2), ratio(rb.t2, r.t2)],
+      ["Waiting for luck, T3 (step 6)", sec(rb.t3), sec(r.t3), ratio(rb.t3, r.t3)],
+      ["Copying with selection and the community, T4 + T5 (steps 7 and 8)", fmtMyr(rb.t4 + rb.t5) + " Myr", fmtMyr(r.t4 + r.t5) + " Myr", ratio(rb.t4 + rb.t5, r.t4 + r.t5)],
+      ["One run, T2 to T5", fmtMyr(tlB.run) + " Myr", fmtMyr(tlN.run) + " Myr", ratio(tlB.run, tlN.run)],
+      ["Waiting for the setting, T1 (step 1, waited once)", fmtMyr(rb.t1) + " Myr", fmtMyr(r.t1) + " Myr", ratio(rb.t1, r.t1)],
+      ["Room for tries", trB.toFixed(2), trN.toFixed(2), Math.abs(trN - trB) < 0.005 ? "no change" : (trN > trB ? "+" : "-") + Math.abs(trN - trB).toFixed(2)],
+    ];
+    const gm = (a) => (a.length ? Math.pow(10, a.reduce((x, y) => x + Math.log10(y), 0) / a.length) : 1);
+    const fF = gm(geoF), fL = gm(geoL);
+    const chemShare = (r.t2 + r.t3) / Math.max(1e-12, r.total);
+    const shareTxt = chemShare < 0.001 ? "under 0.1%" : (100 * chemShare).toFixed(chemShare < 0.1 ? 1 : 0) + "%";
+    const lab = (k) => (SPEC[k] ? SPEC[k].label.charAt(0).toLowerCase() + SPEC[k].label.slice(1) : k);
+    const valTxt = (k, v) => (typeof v === "number" ? fmtSci(v, 3) : JSON.stringify(v)) + (SPEC[k] && SPEC[k].unit ? " " + SPEC[k].unit : "");
+    let read;
+    if (!changed.length && !other.length) {
+      read = `Nothing has changed since the reference. Change an input below, for example the temperature used for the chemistry under "More detailed settings", and this panel shows what moved in this setting, step by step.`;
+    } else {
+      const what = changed.length
+        ? changed.slice(0, 3).map((k) => `${esc(lab(k))} from ${esc(valTxt(k, st.base[k]))} to ${esc(valTxt(k, P[k]))}`).join(", ") + (changed.length > 3 ? ` and ${changed.length - 3} more` : "")
+        : "a choice made elsewhere in the model";
+      const same = Math.abs(Math.log10(fF)) < 0.002 && Math.abs(Math.log10(fL)) < 0.002;
+      const speed = same ? "The forming and lasting times of the named molecules did not change." :
+        `On average over the steps, the named molecules now form ${fF < 1 ? fmtSci(1 / fF, 2) + " times faster" : fmtSci(fF, 2) + " times slower"} and last ${fL < 1 ? fmtSci(1 / fL, 2) + " times shorter" : fmtSci(fL, 2) + " times longer"}.`;
+      const moved = Math.abs(trN - trB) >= 0.005;
+      read = `You changed ${what}. ${speed} ` + (moved
+        ? `This time the change reaches the audit: the chemistry went from ${sec(rb.t2)} to ${sec(r.t2)}, the wait for luck from ${sec(rb.t3)} to ${sec(r.t3)}, and the room for tries from ${trB.toFixed(2)} to ${trN.toFixed(2)}.` + ((r.t2 - rb.t2) * (r.t3 - rb.t3) < 0 ? ` The two pull in opposite directions: ${r.t3 < rb.t3 ? "each try now passes more often, so the wait for luck is shorter, but the steps themselves take longer" : "the steps themselves are quicker, but each try now passes less often, so the wait for luck is longer"}.` : "")
+        : `The change is real, but it stays inside one run. Here the chemistry and the wait for luck together take ${shareTxt} of a run, and ${r.pJoint >= 0.5 ? "every step still passes on about the first try" : "the chance per round barely moved"}, so the room for tries does not move. Most of the run is the wait for the setting and the biology (T1, T4 and T5), which temperature does not touch in this model. To see temperature reach the tries, choose a hard chemistry on page 1 and change it again.`);
+    }
+    el.innerHTML = `<div class="fig-head" style="padding:0;border:0"><div><h2>What your change did to this setting</h2><p class="sub">${esc(r.scenario.name)}. Compared with the reference: the values when this page was first shown, or when you last pressed the button.</p></div>
+      <div class="fig-tools"><button class="btn sm" id="storyBaseBtn">Compare from here</button></div></div>
+      <p class="read" style="margin:10px 0 12px">${read}</p>
+      <div>
+        <div class="tbl-wrap" style="margin-bottom:12px"><table class="data"><thead><tr><th>Step and named molecule</th><th>Forms in</th><th>Lasts</th><th>Chance per try</th></tr></thead><tbody>${rowsHtml.join("")}</tbody></table></div>
+        <div class="tbl-wrap"><table class="data"><thead><tr><th>Where the time goes</th><th>Reference</th><th>Now</th><th>Change</th></tr></thead><tbody>${sumRows.map((x) => `<tr><td>${esc(x[0])}</td><td class="num">${esc(x[1])}</td><td class="num">${esc(x[2])}</td><td class="num">${esc(x[3])}</td></tr>`).join("")}</tbody></table></div>
+      </div>`;
+    $("#storyBaseBtn").onclick = () => { st.base = snapP(P); ctx.recompute(); ctx.toast("Changes on this page are now compared from here"); };
+  }
+
 
   function presetParams(name) {
     const P = ctx.P();

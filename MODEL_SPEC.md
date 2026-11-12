@@ -223,3 +223,26 @@ Earth defaults are unchanged (SC1 33.26 Myr, SC2 100.27 Myr).
 - Room for tries strip: small changes show to 2 decimals; each cell has a bar showing where the time goes (setting appears, chemistry, biology); after a change that moves nothing, a note explains why.
 - Mars colours: yellow boxes with dark amber numbers. Red is kept for negative changes, settings that do not fit, the biggest brake, and the Mars alert banner.
 - Box 8: new tables "Easiest and hardest S stage, and why" (chance per try, time per try and the reasons: named molecule, forms against lasts, surface help, iron and phosphate feed, cycle, delivery) and "Why the tries differ on Earth and Mars" (window, setting appears, chemistry and biology, with the coincidence wait split into tries needed, time between tries and places trying at once; T3 = n x T_cycle / (p_joint x N_sites)).
+
+
+## Version 9.3: the nine steps, the ladder and the time terms
+
+The page "Follow one setting" walks through one run in nine steps. They are not the ladder S0 to S6, and they are not the five time terms. Each step now carries two tags, its ladder stage and its time term, and a table at the foot of the page lists the match:
+
+| Step | What happens | Ladder stage | Time term | Chemistry temperature acts? |
+|---|---|---|---|---|
+| not a step | Getting the element into water | S0 | not timed (assumed met) | no |
+| 1 | A setting appears | none, the place itself | T1 | no |
+| 2 | Sorting by energy | S1 | T2 | yes |
+| 3 | Lasting long enough | S2 | T2 | yes |
+| 4 | Gathering in one place | S3 | T2 | yes |
+| 5 | Making more of itself | S4 | T2 | yes |
+| 6 | Waiting for it all in one place | S1 to S5 together | T3 | yes, through the chance per try |
+| 7 | Copying with selection | S5 | T2 and T3 for its molecule (H11), T4 for the biology | chemistry yes, biology no |
+| 8 | Growing LUCA's community | after S5 | T5 | no |
+| 9 | LUCA, and the time left | LUCA | T1 to T5 | only through T2 and T3 |
+| not a step | Preservation | S6 | not in the audit | no |
+
+Step 7 now also states the forming and lasting times of the S5 molecule, which was counted in T2 and T3 but not shown.
+
+New panel "What your change did to this setting". It compares the chosen setting with a reference (the values when the page was first shown, or when the user presses "Compare from here"). For every ladder stage it lists forming time, lasting time and chance per try, before and now. It then lists T2, T3, T4 + T5, one run, T1 and the room for tries, and a plain reading. With default chemistry a temperature change moves forming and lasting times several fold, but the chemistry is under 0.1% of a run and every step still passes on about the first try, so the tries do not move. With hard chemistry the change reaches T3 and the tries, and the panel says when T2 and T3 pull in opposite directions (cooling makes each try pass more often but makes the slow steps take longer).
